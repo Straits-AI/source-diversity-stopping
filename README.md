@@ -134,7 +134,7 @@ Oracle: **22/50 (44.0%)** of questions required substrate switching.
 
 100 bridge questions, distractor split.  BM25 is the strongest single-substrate baseline (Utility@Budget=0.0169); AEA heuristic is close behind (0.0163).  High lexical overlap makes BM25 near-optimal here — consistent with H2.
 
-### Heterogeneous Benchmark (Phase 4b — Regime C)
+### Heterogeneous Benchmark v1 (Phase 4b — Regime C)
 
 **File:** `experiments/benchmarks/heterogeneous_benchmark.py`
 **Runner:** `experiments/run_heterogeneous_benchmark.py`
@@ -162,6 +162,62 @@ Oracle: **22/50 (44.0%)** of questions required substrate switching.
 | π_aea_heuristic | 0.9333 | 0.3825 | 2.17 | 0.0177 |
 
 AEA substrate switching: 57/100 questions used multiple substrates; AEA outperformed best single-substrate on 27/100 questions; avg 1.57 substrates per question.
+
+**Design flaws identified in v1:**
+- Entity Bridge and Implicit Bridge: bridge entity names leaked into questions, allowing BM25/semantic to trivially find gold paragraphs.
+- Low Lexical Overlap: drug names appeared identically in questions and corpus; BM25 trivially retrieved correct docs.
+- Multi-Hop Chain: three-hop chains exceeded heuristic policy depth; all policies scored ≤0.63 recall.
+
+---
+
+### Heterogeneous Benchmark v2 (Phase 4b — Regime C, corrected)
+
+**File:** `experiments/benchmarks/heterogeneous_benchmark_v2.py`
+**Runner:** `experiments/run_heterogeneous_v2.py`
+**Results:** `experiments/results/heterogeneous_v2.json`
+
+Fixes all v1 design flaws while keeping the same 100-question, 6-type structure:
+
+| Task Type | N | Gold Docs | v2 Fix |
+|---|---|---|---|
+| Entity Bridge | 20 | 2 | Question names only EntityA; EntityB (birthplace) absent from question; entity hop required to find P2 |
+| Implicit Bridge | 20 | 2 | Creator/director name absent from question; only work title mentioned; entity hop required |
+| Semantic + Computation | 20 | 2 | Unchanged — worked well in v1 |
+| Low Lexical Overlap | 20 | 1 | Question uses lay language only (no drug name, no clinical term); gold paragraph uses pharmaceutical terminology |
+| Multi-Hop Chain | 10 | 2 | Simplified to 2-hop chains; question names only EntityA |
+| Discovery + Extraction | 10 | 2 | Unchanged — worked well in v1 |
+
+**Validation (60/60 checks passed):**
+- Entity Bridge: all 20 bridge entities (birthplace city) absent from question text — PASS
+- Implicit Bridge: all 20 creator names absent from question text — PASS
+- Low Lexical Overlap: all 20 questions have 0.0–0.059 Jaccard word overlap with gold paragraph (< 0.15 threshold) — PASS
+
+**Results (N=100):**
+
+| Policy | SupportRecall | SupportPrec | AvgOps | Utility@Budget |
+|--------|--------------|-------------|--------|----------------|
+| π_semantic | 0.9200 | 0.3280 | 2.00 | 0.0439 |
+| π_lexical | 0.8200 | 0.3060 | 2.00 | 0.0142 |
+| π_entity | 0.6250 | 0.7207 | 3.00 | -0.0038 |
+| π_ensemble | 0.9600 | 0.2697 | 3.00 | 0.0071 |
+| π_aea_heuristic | 0.9300 | 0.3905 | 2.99 | 0.0246 |
+
+**By task type (SupportRecall / Utility@Budget):**
+
+| Task Type | π_semantic | π_lexical | π_entity | π_aea_heuristic |
+|---|---|---|---|---|
+| Entity Bridge | 0.90 / -0.009 | 0.925 / 0.025 | 1.00 / -0.013 | 0.925 / 0.009 |
+| Implicit Bridge | 0.90 / -0.023 | 0.85 / -0.022 | 0.65 / -0.021 | 0.925 / -0.025 |
+| Semantic + Computation | 1.00 / 0.067 | 1.00 / 0.065 | 1.00 / 0.052 | 1.00 / **0.083** |
+| Low Lexical Overlap | 1.00 / **0.053** | 0.55 / 0.000 | 0.00 / -0.017 | 1.00 / -0.005 |
+| Multi-Hop Chain (2-hop) | 0.60 / -0.024 | 0.55 / -0.024 | 0.95 / -0.026 | 0.60 / -0.033 |
+| Discovery + Extraction | 1.00 / **0.287** | 1.00 / 0.029 | 0.00 / -0.016 | 1.00 / 0.156 |
+
+**Key v2 findings vs v1:**
+- Low lexical overlap: BM25 recall dropped from 1.0 to 0.55 (fix confirmed working); semantic stays at 1.0 (correct design).
+- Entity bridge: AEA recall improvement negligible (0.925); entity-only still at 1.0 because entity graph hops on person name reach the city paragraph through co-occurrence.
+- Multi-hop chain: entity-only jumped to 0.95 recall (2-hop chains are easier than 3-hop for entity graph BFS); confirms chain simplification was appropriate.
+- AEA substrate switching: 77/100 questions used multiple substrates (up from 57 in v1); AEA outperformed best single-substrate on 20/100 questions; avg 1.78 substrates per question.
 
 ## Status
 
