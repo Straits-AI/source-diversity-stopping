@@ -215,6 +215,16 @@ After each run, apply these decision rules:
 | **Total Phase 4** | **~3-4 weeks** |
 
 ## Next Steps
-- Begin with Step 1: Evaluation infrastructure
-- Then Step 2: Address space implementations
-- Build incrementally, test each component before assembling
+- ~~Step 1: Evaluation infrastructure~~ — **done** (`experiments/aea/evaluation/`)
+- ~~Step 2: Address space implementations (A_vec, A_lex, A_entity)~~ — **done** (`experiments/aea/address_spaces/`)
+- ~~Step 4: AEA Heuristic Policy~~ — **done** (`experiments/aea/policies/heuristic.py`)
+- Step 3: Baseline implementations (BM25/dense/hybrid/ReAct/full-context/Self-RAG)
+- Step 5: Run Baselines (Phase 4a)
+- Step 6: Run Core AEA (Phase 4b)
+- Step 7: Checkpoint with User
+
+**Framework status (2026-04-04):**
+The `experiments/aea/` package is complete and end-to-end tested.
+All five policies (SemanticOnly, LexicalOnly, EntityOnly, AEAHeuristic, Ensemble)
+run through the immutable EvaluationHarness and produce correct per-example and
+aggregated metrics including Utility@Budget.

@@ -35,7 +35,22 @@ Three evaluation regimes:
 ```
 research-log/           # One .md per research event
 experiments/            # Code, scripts, configs
-experiments/poc/        # Proof-of-concept code
+experiments/poc/        # Proof-of-concept code (Phase 3)
+experiments/aea/        # Core AEA framework (Phase 4)
+  types.py              # Shared data types: AgentState, Action, EvidenceBundle, …
+  address_spaces/       # Retrieval backends
+    base.py             # AddressSpace ABC
+    semantic.py         # Dense retrieval (sentence-transformers)
+    lexical.py          # BM25 keyword retrieval (rank_bm25)
+    entity_graph.py     # Entity co-occurrence graph (regex NER + BFS)
+  evaluation/           # Immutable evaluation infrastructure
+    metrics.py          # EM, F1, support_recall, utility_at_budget, …
+    harness.py          # EvaluationHarness
+  policies/             # Routing policies
+    base.py             # Policy ABC
+    single_substrate.py # π_semantic, π_lexical, π_entity baselines
+    heuristic.py        # π_aea_heuristic (adaptive hand-designed routing)
+    ensemble.py         # π_ensemble (query all substrates)
 experiments/configs/    # Configuration files
 data/                   # Datasets, intermediate results
 paper/                  # Living document sections
@@ -119,4 +134,8 @@ Phase 0: Research setup — complete.
 Phase 1: Literature review — complete (63 papers, 5 gaps identified).
 Phase 2: Hypothesis formation — complete (RIGOROUS after theory review).
 Phase 3: PoC validation — complete (Run 1: mechanism confirmed; Run 2: 44% switching rate on real HotpotQA).
-Phase 4: Full experiments — pending.
+Phase 4: Full experiments — in progress.
+  - Core AEA framework implemented (`experiments/aea/`): types, three address spaces,
+    immutable evaluation harness, five policies (semantic-only, lexical-only,
+    entity-only, AEA heuristic, ensemble).
+  - Next: baseline runs (Phase 4a), then core AEA experiment (Phase 4b).
