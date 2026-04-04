@@ -5,4 +5,11 @@ poc-graph	support_recall	1.000	0.5	30	keep	entity graph only baseline
 poc-graph	utility_at_budget	1.200	0.5	30	keep	entity graph only baseline
 poc-heuristic	support_recall	1.000	0.5	30	keep	adaptive heuristic routing
 poc-heuristic	utility_at_budget	1.380	0.5	30	keep	adaptive heuristic routing
-poc-oracle	switching_rate	0.150	0.0	0	keep	15% of questions need substrate switching
+poc-oracle	switching_rate	0.150	0.0	0	keep	15% of questions need substrate switching (hardcoded easy data)
+poc2-semantic	support_recall	0.630	0.5	26	keep	real HotpotQA semantic search only
+poc2-semantic	utility_at_budget	0.189	0.5	26	keep	real HotpotQA semantic search only
+poc2-graph	support_recall	0.930	0.5	26	keep	real HotpotQA entity graph only
+poc2-graph	utility_at_budget	0.175	0.5	26	keep	real HotpotQA entity graph only
+poc2-heuristic	support_recall	0.930	0.5	26	keep	real HotpotQA adaptive heuristic routing
+poc2-heuristic	utility_at_budget	0.313	0.5	26	keep	real HotpotQA adaptive heuristic routing
+poc2-oracle	switching_rate	0.440	0.0	0	keep	44% switching on real HotpotQA bridge questions
