@@ -13,3 +13,13 @@ poc2-graph	utility_at_budget	0.175	0.5	26	keep	real HotpotQA entity graph only
 poc2-heuristic	support_recall	0.930	0.5	26	keep	real HotpotQA adaptive heuristic routing
 poc2-heuristic	utility_at_budget	0.313	0.5	26	keep	real HotpotQA adaptive heuristic routing
 poc2-oracle	switching_rate	0.440	0.0	0	keep	44% switching on real HotpotQA bridge questions
+hotpotqa-semantic	support_recall	0.750	0.5	60	keep	semantic search only on HotpotQA N=100
+hotpotqa-semantic	utility_at_budget	0.0149	0.5	60	keep	semantic search only on HotpotQA N=100
+hotpotqa-lexical	support_recall	0.810	0.5	60	keep	BM25 search only on HotpotQA N=100
+hotpotqa-lexical	utility_at_budget	0.0169	0.5	60	keep	BM25 search only on HotpotQA N=100
+hotpotqa-entity	support_recall	0.715	0.5	60	keep	entity graph only on HotpotQA N=100
+hotpotqa-entity	utility_at_budget	-0.0409	0.5	60	keep	entity graph only on HotpotQA N=100
+hotpotqa-ensemble	support_recall	0.940	0.5	60	keep	ensemble (all substrates) on HotpotQA N=100
+hotpotqa-ensemble	utility_at_budget	0.0028	0.5	60	keep	ensemble (all substrates) on HotpotQA N=100
+hotpotqa-heuristic	support_recall	0.800	0.5	60	keep	AEA heuristic routing on HotpotQA N=100
+hotpotqa-heuristic	utility_at_budget	0.0163	0.5	60	keep	AEA heuristic routing on HotpotQA N=100
