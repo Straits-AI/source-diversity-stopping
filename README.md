@@ -85,5 +85,7 @@ Step 1 oracle: A₁=100%. Step 2 oracle: A₂=100% (only for switch cases).
 ## Status
 
 Phase 0: Research setup — complete.
-Phase 0 PoC: Substrate switching validation — complete (see Experiments section above).
-Phase 1: Literature review — pending.
+Phase 1: Literature review — complete (63 papers, 5 gaps identified).
+Phase 2: Hypothesis formation — complete (RIGOROUS after theory review).
+Phase 3: PoC validation — complete (mechanism confirmed, switching rate 15% on easy data).
+Phase 4: Full experiments — pending.
