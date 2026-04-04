@@ -78,8 +78,14 @@ _MULTI_HOP_PATTERNS = [
     re.compile(r"\bwhat\b.*\band\b.*\bwhat\b", re.IGNORECASE),
     re.compile(r"\bborn in\b", re.IGNORECASE),                # nationality bridge
     re.compile(r"\bsame\b.*\bnationality\b", re.IGNORECASE),
-    re.compile(r"\bboth\b", re.IGNORECASE),
-    re.compile(r"\balso\b", re.IGNORECASE),
+    re.compile(r"\bof the\b.*\bof\b", re.IGNORECASE),        # X of the Y of Z (bridge)
+    re.compile(r"\bstarting from\b", re.IGNORECASE),          # chain traversal
+    re.compile(r"\bfollowing\b.*\blink", re.IGNORECASE),      # graph traversal
+    re.compile(r"\bbirthplace\b", re.IGNORECASE),             # bridge via location
+    re.compile(r"\bfounder\b.*\bof\b", re.IGNORECASE),       # bridge via role
+    re.compile(r"\bdirector\b.*\bof\b", re.IGNORECASE),      # bridge via role
+    re.compile(r"\bcreator\b.*\bof\b", re.IGNORECASE),       # bridge via role
+    re.compile(r"\bauthor\b.*\bof\b", re.IGNORECASE),        # bridge via role
 ]
 
 
@@ -156,33 +162,33 @@ class AEAHeuristicPolicy(Policy):
                 params={"query": state.query, "top_k": self._top_k},
             )
 
-        # ── Step 1: bridge decision ──────────────────────────────────────────
-        if state.step == 1:
-            if _looks_multi_hop(state.query):
-                return Action(
-                    address_space=AddressSpaceType.ENTITY,
-                    operation=Operation.HOP,
-                    params={
-                        "query": state.query,
-                        "depth": 1,
-                        "top_k": self._top_k,
-                    },
-                )
-            # Not a clear bridge — do a second semantic pass with query
+        # ── Step 1+: COVERAGE-DRIVEN routing ────────────────────────────────
+        # Key insight: decide based on what was FOUND, not question patterns.
+        #
+        # If workspace already has multiple high-relevance items from
+        # different sources, we likely have enough → stop or do one more
+        # focused pass. If workspace has items from only one source,
+        # try entity hop to bridge to another.
+
+        high_rel_items = [
+            item for item in state.workspace
+            if item.relevance_score >= 0.4
+        ]
+        unique_sources = set(item.source_id for item in high_rel_items)
+
+        # Enough diverse high-quality evidence → stop
+        if len(high_rel_items) >= 2 and len(unique_sources) >= 2:
             return Action(
                 address_space=AddressSpaceType.SEMANTIC,
-                operation=Operation.SEARCH,
-                params={"query": state.query, "top_k": self._top_k},
+                operation=Operation.STOP,
             )
 
-        # ── Step 2+: adaptive fallback ───────────────────────────────────────
-        workspace_size_before = len(state.history[-1].get("workspace_size_before", []))
-        last_action = state.history[-1].get("action", {}) if state.history else {}
-        last_space = last_action.get("address_space", "")
-        last_n_items = state.history[-1].get("n_items", 0) if state.history else 0
-
-        # If last entity hop produced results → repeat hop to go deeper
-        if last_space == "entity" and last_n_items > 0:
+        # Have some evidence but only from one source → try bridge hop
+        if (
+            len(high_rel_items) >= 1
+            and len(unique_sources) <= 1
+            and _looks_multi_hop(state.query)
+        ):
             return Action(
                 address_space=AddressSpaceType.ENTITY,
                 operation=Operation.HOP,
@@ -193,7 +199,24 @@ class AEAHeuristicPolicy(Policy):
                 },
             )
 
-        # Entity produced nothing or wasn't used → lexical fallback
+        # ── Adaptive fallback for step 2+ ───────────────────────────────────
+        last_action = state.history[-1].get("action", {}) if state.history else {}
+        last_space = last_action.get("address_space", "")
+        last_n_items = state.history[-1].get("n_items", 0) if state.history else 0
+
+        # If last entity hop produced results → one more hop for depth
+        if last_space == "entity" and last_n_items > 0 and state.step <= 3:
+            return Action(
+                address_space=AddressSpaceType.ENTITY,
+                operation=Operation.HOP,
+                params={
+                    "query": state.query,
+                    "depth": 1,
+                    "top_k": self._top_k,
+                },
+            )
+
+        # Default: lexical fallback with focused keywords
         return Action(
             address_space=AddressSpaceType.LEXICAL,
             operation=Operation.SEARCH,
