@@ -1,0 +1,50 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+venv/
+.venv/
+env/
+
+# Data (large files tracked separately)
+data/*.parquet
+data/*.jsonl
+data/*.csv
+data/*.pkl
+*.h5
+*.hdf5
+
+# Model artifacts
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+*.bin
+
+# Indices
+*.faiss
+*.index
+
+# Logs (keep structure, not content)
+experiments/logs/*.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.*
+
+# Jupyter
+.ipynb_checkpoints/
