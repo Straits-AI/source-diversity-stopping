@@ -128,6 +128,41 @@ Oracle: **22/50 (44.0%)** of questions required substrate switching.
 
 **Dependencies:** `experiments/poc/requirements.txt` (`sentence-transformers>=2.2.0`, `datasets>=2.0.0`, `numpy>=1.21.0`)
 
+## Experiments
+
+### HotpotQA Bridge Baselines (Phase 4a)
+
+100 bridge questions, distractor split.  BM25 is the strongest single-substrate baseline (Utility@Budget=0.0169); AEA heuristic is close behind (0.0163).  High lexical overlap makes BM25 near-optimal here — consistent with H2.
+
+### Heterogeneous Benchmark (Phase 4b — Regime C)
+
+**File:** `experiments/benchmarks/heterogeneous_benchmark.py`
+**Runner:** `experiments/run_heterogeneous_benchmark.py`
+**Results:** `experiments/results/heterogeneous_benchmark.json`
+
+100 synthetic questions across 6 task types designed so no single address space can solve all tasks:
+
+| Task Type | N | Gold Docs | Key Challenge |
+|---|---|---|---|
+| Entity Bridge | 20 | 2 | Person→country→capital; bridge entity not in question |
+| Implicit Bridge | 20 | 2 | Movie→director (implicit)→award |
+| Semantic + Computation | 20 | 2 | Find both companies, compare revenue numerically |
+| Low Lexical Overlap | 20 | 1 | Synonyms/paraphrases defeat BM25 |
+| Multi-Hop Chain | 10 | 3 | Three-hop A→B→C |
+| Discovery + Extraction | 10 | 2 | Index paragraph → department budget |
+
+**Results (N=100):**
+
+| Policy | SupportRecall | SupportPrec | AvgOps | Utility@Budget |
+|--------|--------------|-------------|--------|----------------|
+| π_semantic | 0.9183 | 0.3340 | 2.00 | 0.0270 |
+| π_lexical | 0.9100 | 0.3360 | 2.00 | 0.0187 |
+| π_entity | 0.7733 | 0.6197 | 3.00 | 0.0065 |
+| π_ensemble | 0.9600 | 0.2952 | 3.00 | 0.0113 |
+| π_aea_heuristic | 0.9333 | 0.3825 | 2.17 | 0.0177 |
+
+AEA substrate switching: 57/100 questions used multiple substrates; AEA outperformed best single-substrate on 27/100 questions; avg 1.57 substrates per question.
+
 ## Status
 
 Phase 0: Research setup — complete.
@@ -138,4 +173,7 @@ Phase 4: Full experiments — in progress.
   - Core AEA framework implemented (`experiments/aea/`): types, three address spaces,
     immutable evaluation harness, five policies (semantic-only, lexical-only,
     entity-only, AEA heuristic, ensemble).
-  - Next: baseline runs (Phase 4a), then core AEA experiment (Phase 4b).
+  - Phase 4a: HotpotQA baselines — complete.
+  - Phase 4b (Regime C): Heterogeneous benchmark — complete (100 synthetic questions,
+    6 task types, all 5 policies evaluated).
+  - Next: MuSiQue / BRIGHT-style runs, LLM-based answer generation for EM/F1.
