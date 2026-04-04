@@ -1,0 +1,1397 @@
+{
+  "meta": {
+    "n_questions": 20,
+    "max_steps_per_question": 6,
+    "model": "all-MiniLM-L6-v2",
+    "date": "2026-04-04",
+    "data_source": "hardcoded HotpotQA bridge examples"
+  },
+  "oracle": {
+    "switching_questions": 3,
+    "switching_pct": 15.0,
+    "avg_optimal_steps": 1.15,
+    "per_question": [
+      {
+        "id": "5a8b57f25542995d1e6f1371",
+        "question": "Were Scott Derrickson and Ed Wood of the same nationality?",
+        "gold_titles": [
+          "Scott Derrickson",
+          "Ed Wood"
+        ],
+        "requires_switching": false,
+        "oracle_steps": [
+          {
+            "step": 1,
+            "substrate": "A1",
+            "found_gold": 2
+          }
+        ]
+      },
+      {
+        "id": "5a8b57f25542995d1e6f1372",
+        "question": "What film directed by Brian De Palma was released in 1984?",
+        "gold_titles": [
+          "Brian De Palma",
+          "Body Double"
+        ],
+        "requires_switching": true,
+        "oracle_steps": [
+          {
+            "step": 1,
+            "substrate": "A1",
+            "found_gold": 1
+          },
+          {
+            "step": 2,
+            "substrate": "A2",
+            "found_gold": 1
+          }
+        ]
+      },
+      {
+        "id": "5a8b57f25542995d1e6f1373",
+        "question": "The composer of 'Goldberg Variations' was born in which city?",
+        "gold_titles": [
+          "Goldberg Variations",
+          "Johann Sebastian Bach"
+        ],
+        "requires_switching": false,
+        "oracle_steps": [
+          {
+            "step": 1,
+            "substrate": "A1",
+            "found_gold": 2
+          }
+        ]
+      },
+      {
+        "id": "5a8b57f25542995d1e6f1374",
+        "question": "What is the name of the magazine founded by the publisher of The Atlantic?",
+        "gold_titles": [
+          "The Atlantic",
+          "Moses Dresser Phillips"
+        ],
+        "requires_switching": false,
+        "oracle_steps": [
+          {
+            "step": 1,
+            "substrate": "A1",
+            "found_gold": 2
+          }
+        ]
+      },
+      {
+        "id": "5a8b57f25542995d1e6f1375",
+        "question": "Which award did the director of the film 'Whiplash' win at Sundance?",
+        "gold_titles": [
+          "Whiplash (2014 film)",
+          "Damien Chazelle"
+        ],
+        "requires_switching": false,
+        "oracle_steps": [
+          {
+            "step": 1,
+            "substrate": "A1",
+            "found_gold": 2
+          }
+        ]
+      },
+      {
+        "id": "5a8b57f25542995d1e6f1376",
+        "question": "In what country was the director of the movie 'Pan's Labyrinth' born?",
+        "gold_titles": [
+          "Pan's Labyrinth",
+          "Guillermo del Toro"
+        ],
+        "requires_switching": false,
+        "oracle_steps": [
+          {
+            "step": 1,
+            "substrate": "A1",
+            "found_gold": 2
+          }
+        ]
+      },
+      {
+        "id": "5a8b57f25542995d1e6f1377",
+        "question": "The TV series 'Westworld' was based on a movie by which author?",
+        "gold_titles": [
+          "Westworld (TV series)",
+          "Westworld (film)"
+        ],
+        "requires_switching": false,
+        "oracle_steps": [
+          {
+            "step": 1,
+            "substrate": "A1",
+            "found_gold": 2
+          }
+        ]
+      },
+      {
+        "id": "5a8b57f25542995d1e6f1378",
+        "question": "Which university did the founder of Reddit attend?",
+        "gold_titles": [
+          "Reddit",
+          "Steve Huffman"
+        ],
+        "requires_switching": false,
+        "oracle_steps": [
+          {
+            "step": 1,
+            "substrate": "A1",
+            "found_gold": 2
+          }
+        ]
+      },
+      {
+        "id": "5a8b57f25542995d1e6f1379",
+        "question": "What position did the father of Justin Trudeau hold in Canada?",
+        "gold_titles": [
+          "Justin Trudeau",
+          "Pierre Trudeau"
+        ],
+        "requires_switching": false,
+        "oracle_steps": [
+          {
+            "step": 1,
+            "substrate": "A1",
+            "found_gold": 2
+          }
+        ]
+      },
+      {
+        "id": "5a8b57f25542995d1e6f1380",
+        "question": "The novel that inspired the movie 'No Country for Old Men' was written by which author?",
+        "gold_titles": [
+          "No Country for Old Men (film)",
+          "No Country for Old Men"
+        ],
+        "requires_switching": false,
+        "oracle_steps": [
+          {
+            "step": 1,
+            "substrate": "A1",
+            "found_gold": 2
+          }
+        ]
+      },
+      {
+        "id": "5a8b57f25542995d1e6f1381",
+        "question": "What country is the headquarters of the company that makes the iPhone in?",
+        "gold_titles": [
+          "iPhone",
+          "Apple Inc."
+        ],
+        "requires_switching": false,
+        "oracle_steps": [
+          {
+            "step": 1,
+            "substrate": "A1",
+            "found_gold": 2
+          }
+        ]
+      },
+      {
+        "id": "5a8b57f25542995d1e6f1382",
+        "question": "The actress who plays Daenerys Targaryen in Game of Thrones was born in which city?",
+        "gold_titles": [
+          "Daenerys Targaryen",
+          "Emilia Clarke"
+        ],
+        "requires_switching": false,
+        "oracle_steps": [
+          {
+            "step": 1,
+            "substrate": "A1",
+            "found_gold": 2
+          }
+        ]
+      },
+      {
+        "id": "5a8b57f25542995d1e6f1383",
+        "question": "The video game 'Halo' was originally developed by a company that was later acquired by which tech giant?",
+        "gold_titles": [
+          "Halo (franchise)",
+          "Bungie"
+        ],
+        "requires_switching": true,
+        "oracle_steps": [
+          {
+            "step": 1,
+            "substrate": "A1",
+            "found_gold": 1
+          },
+          {
+            "step": 2,
+            "substrate": "A2",
+            "found_gold": 1
+          }
+        ]
+      },
+      {
+        "id": "5a8b57f25542995d1e6f1384",
+        "question": "The painter who created the ceiling of the Sistine Chapel was from which Italian city?",
+        "gold_titles": [
+          "Sistine Chapel ceiling",
+          "Michelangelo"
+        ],
+        "requires_switching": true,
+        "oracle_steps": [
+          {
+            "step": 1,
+            "substrate": "A1",
+            "found_gold": 1
+          },
+          {
+            "step": 2,
+            "substrate": "A2",
+            "found_gold": 1
+          }
+        ]
+      },
+      {
+        "id": "5a8b57f25542995d1e6f1385",
+        "question": "The founding CEO of Tesla Motors studied at which university?",
+        "gold_titles": [
+          "Tesla, Inc.",
+          "Elon Musk"
+        ],
+        "requires_switching": false,
+        "oracle_steps": [
+          {
+            "step": 1,
+            "substrate": "A1",
+            "found_gold": 2
+          }
+        ]
+      },
+      {
+        "id": "5a8b57f25542995d1e6f1386",
+        "question": "Which country was ruled by the monarch who commissioned the construction of Versailles?",
+        "gold_titles": [
+          "Palace of Versailles",
+          "Louis XIV"
+        ],
+        "requires_switching": false,
+        "oracle_steps": [
+          {
+            "step": 1,
+            "substrate": "A1",
+            "found_gold": 2
+          }
+        ]
+      },
+      {
+        "id": "5a8b57f25542995d1e6f1387",
+        "question": "The Nobel Peace Prize was first awarded in the country where its founder was born. What country is that?",
+        "gold_titles": [
+          "Nobel Peace Prize",
+          "Alfred Nobel"
+        ],
+        "requires_switching": false,
+        "oracle_steps": [
+          {
+            "step": 1,
+            "substrate": "A1",
+            "found_gold": 2
+          }
+        ]
+      },
+      {
+        "id": "5a8b57f25542995d1e6f1388",
+        "question": "The creator of the character Sherlock Holmes was educated at which Scottish university?",
+        "gold_titles": [
+          "Sherlock Holmes",
+          "Arthur Conan Doyle"
+        ],
+        "requires_switching": false,
+        "oracle_steps": [
+          {
+            "step": 1,
+            "substrate": "A1",
+            "found_gold": 2
+          }
+        ]
+      },
+      {
+        "id": "5a8b57f25542995d1e6f1389",
+        "question": "The lead actor in the Oscar-winning film 'The Silence of the Lambs' was born in which Welsh city?",
+        "gold_titles": [
+          "The Silence of the Lambs (film)",
+          "Anthony Hopkins"
+        ],
+        "requires_switching": false,
+        "oracle_steps": [
+          {
+            "step": 1,
+            "substrate": "A1",
+            "found_gold": 2
+          }
+        ]
+      },
+      {
+        "id": "5a8b57f25542995d1e6f1390",
+        "question": "The director of 'The Dark Knight' graduated from which English university?",
+        "gold_titles": [
+          "The Dark Knight",
+          "Christopher Nolan"
+        ],
+        "requires_switching": false,
+        "oracle_steps": [
+          {
+            "step": 1,
+            "substrate": "A1",
+            "found_gold": 2
+          }
+        ]
+      }
+    ]
+  },
+  "policies": {
+    "pi_semantic": {
+      "avg_recall": 0.875,
+      "avg_steps_to_first": 1.0,
+      "avg_total_ops": 2.15,
+      "per_question": [
+        {
+          "id": "5a8b57f25542995d1e6f1371",
+          "retrieved_titles": [
+            "Ed Wood",
+            "Scott Derrickson"
+          ],
+          "recall": 1.0,
+          "steps_to_first": 1,
+          "total_ops": 2,
+          "substrate_trace": [
+            "A1",
+            "A1"
+          ]
+        },
+        {
+          "id": "5a8b57f25542995d1e6f1372",
+          "retrieved_titles": [
+            "Brian De Palma",
+            "Scarface (1983 film)"
+          ],
+          "recall": 0.5,
+          "steps_to_first": 1,
+          "total_ops": 2,
+          "substrate_trace": [
+            "A1",
+            "A1"
+          ]
+        },
+        {
+          "id": "5a8b57f25542995d1e6f1373",
+          "retrieved_titles": [
+            "Goldberg Variations",
+            "Johann Gottlieb Goldberg"
+          ],
+          "recall": 0.5,
+          "steps_to_first": 1,
+          "total_ops": 2,
+          "substrate_trace": [
+            "A1",
+            "A1"
+          ]
+        },
+        {
+          "id": "5a8b57f25542995d1e6f1374",
+          "retrieved_titles": [
+            "The Atlantic",
+            "Moses Dresser Phillips"
+          ],
+          "recall": 1.0,
+          "steps_to_first": 1,
+          "total_ops": 2,
+          "substrate_trace": [
+            "A1",
+            "A1"
+          ]
+        },
+        {
+          "id": "5a8b57f25542995d1e6f1375",
+          "retrieved_titles": [
+            "Damien Chazelle",
+            "Whiplash (2014 film)"
+          ],
+          "recall": 1.0,
+          "steps_to_first": 1,
+          "total_ops": 2,
+          "substrate_trace": [
+            "A1",
+            "A1"
+          ]
+        },
+        {
+          "id": "5a8b57f25542995d1e6f1376",
+          "retrieved_titles": [
+            "Pan's Labyrinth",
+            "Guillermo del Toro"
+          ],
+          "recall": 1.0,
+          "steps_to_first": 1,
+          "total_ops": 2,
+          "substrate_trace": [
+            "A1",
+            "A1"
+          ]
+        },
+        {
+          "id": "5a8b57f25542995d1e6f1377",
+          "retrieved_titles": [
+            "Westworld (TV series)",
+            "Westworld (film)",
+            "Jonathan Nolan"
+          ],
+          "recall": 1.0,
+          "steps_to_first": 1,
+          "total_ops": 3,
+          "substrate_trace": [
+            "A1",
+            "A1",
+            "A1"
+          ]
+        },
+        {
+          "id": "5a8b57f25542995d1e6f1378",
+          "retrieved_titles": [
+            "Reddit",
+            "Steve Huffman"
+          ],
+          "recall": 1.0,
+          "steps_to_first": 1,
+          "total_ops": 2,
+          "substrate_trace": [
+            "A1",
+            "A1"
+          ]
+        },
+        {
+          "id": "5a8b57f25542995d1e6f1379",
+          "retrieved_titles": [
+            "Pierre Trudeau",
+            "Justin Trudeau"
+          ],
+          "recall": 1.0,
+          "steps_to_first": 1,
+          "total_ops": 2,
+          "substrate_trace": [
+            "A1",
+            "A1"
+          ]
+        },
+        {
+          "id": "5a8b57f25542995d1e6f1380",
+          "retrieved_titles": [
+            "No Country for Old Men (film)",
+            "No Country for Old Men"
+          ],
+          "recall": 1.0,
+          "steps_to_first": 1,
+          "total_ops": 2,
+          "substrate_trace": [
+            "A1",
+            "A1"
+          ]
+        },
+        {
+          "id": "5a8b57f25542995d1e6f1381",
+          "retrieved_titles": [
+            "Apple Inc.",
+            "iPhone"
+          ],
+          "recall": 1.0,
+          "steps_to_first": 1,
+          "total_ops": 2,
+          "substrate_trace": [
+            "A1",
+            "A1"
+          ]
+        },
+        {
+          "id": "5a8b57f25542995d1e6f1382",
+          "retrieved_titles": [
+            "Emilia Clarke",
+            "Daenerys Targaryen"
+          ],
+          "recall": 1.0,
+          "steps_to_first": 1,
+          "total_ops": 2,
+          "substrate_trace": [
+            "A1",
+            "A1"
+          ]
+        },
+        {
+          "id": "5a8b57f25542995d1e6f1383",
+          "retrieved_titles": [
+            "Halo (franchise)",
+            "343 Industries"
+          ],
+          "recall": 0.5,
+          "steps_to_first": 1,
+          "total_ops": 2,
+          "substrate_trace": [
+            "A1",
+            "A1"
+          ]
+        },
+        {
+          "id": "5a8b57f25542995d1e6f1384",
+          "retrieved_titles": [
+            "Sistine Chapel ceiling",
+            "Sistine Chapel"
+          ],
+          "recall": 0.5,
+          "steps_to_first": 1,
+          "total_ops": 2,
+          "substrate_trace": [
+            "A1",
+            "A1"
+          ]
+        },
+        {
+          "id": "5a8b57f25542995d1e6f1385",
+          "retrieved_titles": [
+            "Tesla, Inc.",
+            "Elon Musk"
+          ],
+          "recall": 1.0,
+          "steps_to_first": 1,
+          "total_ops": 2,
+          "substrate_trace": [
+            "A1",
+            "A1"
+          ]
+        },
+        {
+          "id": "5a8b57f25542995d1e6f1386",
+          "retrieved_titles": [
+            "Palace of Versailles",
+            "Versailles"
+          ],
+          "recall": 0.5,
+          "steps_to_first": 1,
+          "total_ops": 2,
+          "substrate_trace": [
+            "A1",
+            "A1"
+          ]
+        },
+        {
+          "id": "5a8b57f25542995d1e6f1387",
+          "retrieved_titles": [
+            "Nobel Peace Prize",
+            "Alfred Nobel"
+          ],
+          "recall": 1.0,
+          "steps_to_first": 1,
+          "total_ops": 2,
+          "substrate_trace": [
+            "A1",
+            "A1"
+          ]
+        },
+        {
+          "id": "5a8b57f25542995d1e6f1388",
+          "retrieved_titles": [
+            "Sherlock Holmes",
+            "Arthur Conan Doyle"
+          ],
+          "recall": 1.0,
+          "steps_to_first": 1,
+          "total_ops": 2,
+          "substrate_trace": [
+            "A1",
+            "A1"
+          ]
+        },
+        {
+          "id": "5a8b57f25542995d1e6f1389",
+          "retrieved_titles": [
+            "Anthony Hopkins",
+            "Jonathan Demme",
+            "The Silence of the Lambs (film)"
+          ],
+          "recall": 1.0,
+          "steps_to_first": 1,
+          "total_ops": 3,
+          "substrate_trace": [
+            "A1",
+            "A1",
+            "A1"
+          ]
+        },
+        {
+          "id": "5a8b57f25542995d1e6f1390",
+          "retrieved_titles": [
+            "The Dark Knight",
+            "Heath Ledger",
+            "Christopher Nolan"
+          ],
+          "recall": 1.0,
+          "steps_to_first": 1,
+          "total_ops": 3,
+          "substrate_trace": [
+            "A1",
+            "A1",
+            "A1"
+          ]
+        }
+      ]
+    },
+    "pi_graph": {
+      "avg_recall": 1.0,
+      "avg_steps_to_first": 1.05,
+      "avg_total_ops": 5.0,
+      "per_question": [
+        {
+          "id": "5a8b57f25542995d1e6f1371",
+          "retrieved_titles": [
+            "Plan 9 from Outer Space",
+            "Doctor Strange (film)",
+            "Sinister (film)",
+            "Ed Wood",
+            "Scott Derrickson"
+          ],
+          "recall": 1.0,
+          "steps_to_first": 2,
+          "total_ops": 5,
+          "substrate_trace": [
+            "A2",
+            "A2",
+            "A2",
+            "A2",
+            "A2"
+          ]
+        },
+        {
+          "id": "5a8b57f25542995d1e6f1372",
+          "retrieved_titles": [
+            "Body Double",
+            "Carrie (1976 film)",
+            "Scarface (1983 film)",
+            "Brian De Palma",
+            "Mission Impossible"
+          ],
+          "recall": 1.0,
+          "steps_to_first": 1,
+          "total_ops": 5,
+          "substrate_trace": [
+            "A2",
+            "A2",
+            "A2",
+            "A2",
+            "A2"
+          ]
+        },
+        {
+          "id": "5a8b57f25542995d1e6f1373",
+          "retrieved_titles": [
+            "Goldberg Variations",
+            "Johann Sebastian Bach",
+            "Johann Gottlieb Goldberg",
+            "Eisenach"
+          ],
+          "recall": 1.0,
+          "steps_to_first": 1,
+          "total_ops": 5,
+          "substrate_trace": [
+            "A2",
+            "A2",
+            "A2",
+            "A2",
+            "A2"
+          ]
+        },
+        {
+          "id": "5a8b57f25542995d1e6f1374",
+          "retrieved_titles": [
+            "The Atlantic",
+            "Moses Dresser Phillips",
+            "Ralph Waldo Emerson",
+            "Boston literary scene",
+            "The Boston Miscellany"
+          ],
+          "recall": 1.0,
+          "steps_to_first": 1,
+          "total_ops": 5,
+          "substrate_trace": [
+            "A2",
+            "A2",
+            "A2",
+            "A2",
+            "A2"
+          ]
+        },
+        {
+          "id": "5a8b57f25542995d1e6f1375",
+          "retrieved_titles": [
+            "Damien Chazelle",
+            "Sundance Film Festival",
+            "Whiplash (2014 film)",
+            "Miles Teller",
+            "J. K. Simmons"
+          ],
+          "recall": 1.0,
+          "steps_to_first": 1,
+          "total_ops": 6,
+          "substrate_trace": [
+            "A2",
+            "A2",
+            "A2",
+            "A2",
+            "A2",
+            "A2"
+          ]
+        },
+        {
+          "id": "5a8b57f25542995d1e6f1376",
+          "retrieved_titles": [
+            "Pan's Labyrinth",
+            "Guillermo del Toro",
+            "The Shape of Water",
+            "Guadalajara"
+          ],
+          "recall": 1.0,
+          "steps_to_first": 1,
+          "total_ops": 5,
+          "substrate_trace": [
+            "A2",
+            "A2",
+            "A2",
+            "A2",
+            "A2"
+          ]
+        },
+        {
+          "id": "5a8b57f25542995d1e6f1377",
+          "retrieved_titles": [
+            "Westworld (TV series)",
+            "Westworld (film)",
+            "Michael Crichton",
+            "Jonathan Nolan",
+            "Jurassic Park (novel)"
+          ],
+          "recall": 1.0,
+          "steps_to_first": 1,
+          "total_ops": 5,
+          "substrate_trace": [
+            "A2",
+            "A2",
+            "A2",
+            "A2",
+            "A2"
+          ]
+        },
+        {
+          "id": "5a8b57f25542995d1e6f1378",
+          "retrieved_titles": [
+            "Steve Huffman",
+            "Alexis Ohanian",
+            "Reddit",
+            "University of Virginia",
+            "Y Combinator"
+          ],
+          "recall": 1.0,
+          "steps_to_first": 1,
+          "total_ops": 6,
+          "substrate_trace": [
+            "A2",
+            "A2",
+            "A2",
+            "A2",
+            "A2",
+            "A2"
+          ]
+        },
+        {
+          "id": "5a8b57f25542995d1e6f1379",
+          "retrieved_titles": [
+            "Pierre Trudeau",
+            "Liberal Party of Canada",
+            "Margaret Trudeau",
+            "Justin Trudeau"
+          ],
+          "recall": 1.0,
+          "steps_to_first": 1,
+          "total_ops": 4,
+          "substrate_trace": [
+            "A2",
+            "A2",
+            "A2",
+            "A2"
+          ]
+        },
+        {
+          "id": "5a8b57f25542995d1e6f1380",
+          "retrieved_titles": [
+            "No Country for Old Men (film)",
+            "No Country for Old Men",
+            "Cormac McCarthy",
+            "Coen Brothers",
+            "The Road (novel)"
+          ],
+          "recall": 1.0,
+          "steps_to_first": 1,
+          "total_ops": 5,
+          "substrate_trace": [
+            "A2",
+            "A2",
+            "A2",
+            "A2",
+            "A2"
+          ]
+        },
+        {
+          "id": "5a8b57f25542995d1e6f1381",
+          "retrieved_titles": [
+            "iPhone",
+            "Apple Inc.",
+            "Steve Jobs",
+            "Cupertino, California",
+            "iOS"
+          ],
+          "recall": 1.0,
+          "steps_to_first": 1,
+          "total_ops": 5,
+          "substrate_trace": [
+            "A2",
+            "A2",
+            "A2",
+            "A2",
+            "A2"
+          ]
+        },
+        {
+          "id": "5a8b57f25542995d1e6f1382",
+          "retrieved_titles": [
+            "Emilia Clarke",
+            "Daenerys Targaryen",
+            "Game of Thrones",
+            "A Song of Ice and Fire"
+          ],
+          "recall": 1.0,
+          "steps_to_first": 1,
+          "total_ops": 4,
+          "substrate_trace": [
+            "A2",
+            "A2",
+            "A2",
+            "A2"
+          ]
+        },
+        {
+          "id": "5a8b57f25542995d1e6f1383",
+          "retrieved_titles": [
+            "Halo (franchise)",
+            "Bungie",
+            "Microsoft",
+            "Xbox",
+            "343 Industries"
+          ],
+          "recall": 1.0,
+          "steps_to_first": 1,
+          "total_ops": 5,
+          "substrate_trace": [
+            "A2",
+            "A2",
+            "A2",
+            "A2",
+            "A2"
+          ]
+        },
+        {
+          "id": "5a8b57f25542995d1e6f1384",
+          "retrieved_titles": [
+            "Pope Julius II",
+            "Sistine Chapel ceiling",
+            "Sistine Chapel",
+            "Caprese Michelangelo",
+            "Michelangelo"
+          ],
+          "recall": 1.0,
+          "steps_to_first": 1,
+          "total_ops": 5,
+          "substrate_trace": [
+            "A2",
+            "A2",
+            "A2",
+            "A2",
+            "A2"
+          ]
+        },
+        {
+          "id": "5a8b57f25542995d1e6f1385",
+          "retrieved_titles": [
+            "Tesla, Inc.",
+            "Elon Musk",
+            "SpaceX",
+            "University of Pennsylvania",
+            "Queen's University"
+          ],
+          "recall": 1.0,
+          "steps_to_first": 1,
+          "total_ops": 5,
+          "substrate_trace": [
+            "A2",
+            "A2",
+            "A2",
+            "A2",
+            "A2"
+          ]
+        },
+        {
+          "id": "5a8b57f25542995d1e6f1386",
+          "retrieved_titles": [
+            "Palace of Versailles",
+            "Louis XIV",
+            "Versailles",
+            "French monarchy",
+            "French Revolution"
+          ],
+          "recall": 1.0,
+          "steps_to_first": 1,
+          "total_ops": 5,
+          "substrate_trace": [
+            "A2",
+            "A2",
+            "A2",
+            "A2",
+            "A2"
+          ]
+        },
+        {
+          "id": "5a8b57f25542995d1e6f1387",
+          "retrieved_titles": [
+            "Nobel Peace Prize",
+            "Nobel Prize",
+            "Stockholm",
+            "Alfred Nobel",
+            "Dynamite"
+          ],
+          "recall": 1.0,
+          "steps_to_first": 1,
+          "total_ops": 5,
+          "substrate_trace": [
+            "A2",
+            "A2",
+            "A2",
+            "A2",
+            "A2"
+          ]
+        },
+        {
+          "id": "5a8b57f25542995d1e6f1388",
+          "retrieved_titles": [
+            "Joseph Bell",
+            "Arthur Conan Doyle",
+            "221B Baker Street",
+            "Sherlock Holmes",
+            "University of Edinburgh"
+          ],
+          "recall": 1.0,
+          "steps_to_first": 1,
+          "total_ops": 5,
+          "substrate_trace": [
+            "A2",
+            "A2",
+            "A2",
+            "A2",
+            "A2"
+          ]
+        },
+        {
+          "id": "5a8b57f25542995d1e6f1389",
+          "retrieved_titles": [
+            "Anthony Hopkins",
+            "The Silence of the Lambs (film)",
+            "Jodie Foster",
+            "Jonathan Demme",
+            "Port Talbot"
+          ],
+          "recall": 1.0,
+          "steps_to_first": 1,
+          "total_ops": 5,
+          "substrate_trace": [
+            "A2",
+            "A2",
+            "A2",
+            "A2",
+            "A2"
+          ]
+        },
+        {
+          "id": "5a8b57f25542995d1e6f1390",
+          "retrieved_titles": [
+            "Christopher Nolan",
+            "The Dark Knight",
+            "Heath Ledger",
+            "University College London",
+            "Inception"
+          ],
+          "recall": 1.0,
+          "steps_to_first": 1,
+          "total_ops": 5,
+          "substrate_trace": [
+            "A2",
+            "A2",
+            "A2",
+            "A2",
+            "A2"
+          ]
+        }
+      ]
+    },
+    "pi_heuristic": {
+      "avg_recall": 1.0,
+      "avg_steps_to_first": 1.0,
+      "avg_total_ops": 2.0,
+      "per_question": [
+        {
+          "id": "5a8b57f25542995d1e6f1371",
+          "retrieved_titles": [
+            "Ed Wood",
+            "Scott Derrickson",
+            "Plan 9 from Outer Space"
+          ],
+          "recall": 1.0,
+          "steps_to_first": 1,
+          "total_ops": 2,
+          "substrate_trace": [
+            "A1",
+            "A2"
+          ]
+        },
+        {
+          "id": "5a8b57f25542995d1e6f1372",
+          "retrieved_titles": [
+            "Brian De Palma",
+            "Scarface (1983 film)",
+            "Body Double",
+            "Carrie (1976 film)",
+            "Mission Impossible"
+          ],
+          "recall": 1.0,
+          "steps_to_first": 1,
+          "total_ops": 2,
+          "substrate_trace": [
+            "A1",
+            "A2"
+          ]
+        },
+        {
+          "id": "5a8b57f25542995d1e6f1373",
+          "retrieved_titles": [
+            "Goldberg Variations",
+            "Johann Gottlieb Goldberg",
+            "Johann Sebastian Bach",
+            "Eisenach"
+          ],
+          "recall": 1.0,
+          "steps_to_first": 1,
+          "total_ops": 2,
+          "substrate_trace": [
+            "A1",
+            "A2"
+          ]
+        },
+        {
+          "id": "5a8b57f25542995d1e6f1374",
+          "retrieved_titles": [
+            "The Atlantic",
+            "Moses Dresser Phillips",
+            "Ralph Waldo Emerson",
+            "Boston literary scene",
+            "The Boston Miscellany"
+          ],
+          "recall": 1.0,
+          "steps_to_first": 1,
+          "total_ops": 2,
+          "substrate_trace": [
+            "A1",
+            "A2"
+          ]
+        },
+        {
+          "id": "5a8b57f25542995d1e6f1375",
+          "retrieved_titles": [
+            "Damien Chazelle",
+            "Whiplash (2014 film)",
+            "Sundance Film Festival",
+            "Miles Teller",
+            "J. K. Simmons"
+          ],
+          "recall": 1.0,
+          "steps_to_first": 1,
+          "total_ops": 2,
+          "substrate_trace": [
+            "A1",
+            "A2"
+          ]
+        },
+        {
+          "id": "5a8b57f25542995d1e6f1376",
+          "retrieved_titles": [
+            "Pan's Labyrinth",
+            "Guillermo del Toro",
+            "The Shape of Water"
+          ],
+          "recall": 1.0,
+          "steps_to_first": 1,
+          "total_ops": 2,
+          "substrate_trace": [
+            "A1",
+            "A2"
+          ]
+        },
+        {
+          "id": "5a8b57f25542995d1e6f1377",
+          "retrieved_titles": [
+            "Westworld (TV series)",
+            "Westworld (film)",
+            "Michael Crichton",
+            "Jonathan Nolan",
+            "Jurassic Park (novel)"
+          ],
+          "recall": 1.0,
+          "steps_to_first": 1,
+          "total_ops": 2,
+          "substrate_trace": [
+            "A1",
+            "A2"
+          ]
+        },
+        {
+          "id": "5a8b57f25542995d1e6f1378",
+          "retrieved_titles": [
+            "Reddit",
+            "Steve Huffman",
+            "Alexis Ohanian",
+            "Y Combinator"
+          ],
+          "recall": 1.0,
+          "steps_to_first": 1,
+          "total_ops": 2,
+          "substrate_trace": [
+            "A1",
+            "A2"
+          ]
+        },
+        {
+          "id": "5a8b57f25542995d1e6f1379",
+          "retrieved_titles": [
+            "Pierre Trudeau",
+            "Justin Trudeau",
+            "Margaret Trudeau",
+            "Liberal Party of Canada"
+          ],
+          "recall": 1.0,
+          "steps_to_first": 1,
+          "total_ops": 2,
+          "substrate_trace": [
+            "A1",
+            "A2"
+          ]
+        },
+        {
+          "id": "5a8b57f25542995d1e6f1380",
+          "retrieved_titles": [
+            "No Country for Old Men (film)",
+            "No Country for Old Men",
+            "Cormac McCarthy",
+            "Coen Brothers",
+            "The Road (novel)"
+          ],
+          "recall": 1.0,
+          "steps_to_first": 1,
+          "total_ops": 2,
+          "substrate_trace": [
+            "A1",
+            "A2"
+          ]
+        },
+        {
+          "id": "5a8b57f25542995d1e6f1381",
+          "retrieved_titles": [
+            "Apple Inc.",
+            "iPhone",
+            "Steve Jobs",
+            "Cupertino, California",
+            "iOS"
+          ],
+          "recall": 1.0,
+          "steps_to_first": 1,
+          "total_ops": 2,
+          "substrate_trace": [
+            "A1",
+            "A2"
+          ]
+        },
+        {
+          "id": "5a8b57f25542995d1e6f1382",
+          "retrieved_titles": [
+            "Emilia Clarke",
+            "Daenerys Targaryen",
+            "Game of Thrones"
+          ],
+          "recall": 1.0,
+          "steps_to_first": 1,
+          "total_ops": 2,
+          "substrate_trace": [
+            "A1",
+            "A2"
+          ]
+        },
+        {
+          "id": "5a8b57f25542995d1e6f1383",
+          "retrieved_titles": [
+            "Halo (franchise)",
+            "343 Industries",
+            "Bungie",
+            "Microsoft",
+            "Xbox"
+          ],
+          "recall": 1.0,
+          "steps_to_first": 1,
+          "total_ops": 2,
+          "substrate_trace": [
+            "A1",
+            "A2"
+          ]
+        },
+        {
+          "id": "5a8b57f25542995d1e6f1384",
+          "retrieved_titles": [
+            "Sistine Chapel ceiling",
+            "Sistine Chapel",
+            "Michelangelo",
+            "Pope Julius II",
+            "Caprese Michelangelo"
+          ],
+          "recall": 1.0,
+          "steps_to_first": 1,
+          "total_ops": 2,
+          "substrate_trace": [
+            "A1",
+            "A2"
+          ]
+        },
+        {
+          "id": "5a8b57f25542995d1e6f1385",
+          "retrieved_titles": [
+            "Tesla, Inc.",
+            "Elon Musk",
+            "SpaceX",
+            "University of Pennsylvania",
+            "Queen's University"
+          ],
+          "recall": 1.0,
+          "steps_to_first": 1,
+          "total_ops": 2,
+          "substrate_trace": [
+            "A1",
+            "A2"
+          ]
+        },
+        {
+          "id": "5a8b57f25542995d1e6f1386",
+          "retrieved_titles": [
+            "Palace of Versailles",
+            "Versailles",
+            "Louis XIV",
+            "French monarchy",
+            "French Revolution"
+          ],
+          "recall": 1.0,
+          "steps_to_first": 1,
+          "total_ops": 2,
+          "substrate_trace": [
+            "A1",
+            "A2"
+          ]
+        },
+        {
+          "id": "5a8b57f25542995d1e6f1387",
+          "retrieved_titles": [
+            "Nobel Peace Prize",
+            "Alfred Nobel",
+            "Nobel Prize",
+            "Stockholm",
+            "Dynamite"
+          ],
+          "recall": 1.0,
+          "steps_to_first": 1,
+          "total_ops": 2,
+          "substrate_trace": [
+            "A1",
+            "A2"
+          ]
+        },
+        {
+          "id": "5a8b57f25542995d1e6f1388",
+          "retrieved_titles": [
+            "Sherlock Holmes",
+            "Arthur Conan Doyle",
+            "University of Edinburgh",
+            "Joseph Bell",
+            "221B Baker Street"
+          ],
+          "recall": 1.0,
+          "steps_to_first": 1,
+          "total_ops": 2,
+          "substrate_trace": [
+            "A1",
+            "A2"
+          ]
+        },
+        {
+          "id": "5a8b57f25542995d1e6f1389",
+          "retrieved_titles": [
+            "Anthony Hopkins",
+            "Jonathan Demme",
+            "The Silence of the Lambs (film)",
+            "Jodie Foster",
+            "Port Talbot"
+          ],
+          "recall": 1.0,
+          "steps_to_first": 1,
+          "total_ops": 2,
+          "substrate_trace": [
+            "A1",
+            "A2"
+          ]
+        },
+        {
+          "id": "5a8b57f25542995d1e6f1390",
+          "retrieved_titles": [
+            "The Dark Knight",
+            "Heath Ledger",
+            "Christopher Nolan",
+            "University College London",
+            "Inception"
+          ],
+          "recall": 1.0,
+          "steps_to_first": 1,
+          "total_ops": 2,
+          "substrate_trace": [
+            "A1",
+            "A2"
+          ]
+        }
+      ]
+    }
+  },
+  "step_substrate_distribution": {
+    "1": {
+      "A1": 20,
+      "A2": 0
+    },
+    "2": {
+      "A1": 0,
+      "A2": 3
+    }
+  }
+}

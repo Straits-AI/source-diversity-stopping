@@ -1,1 +1,8 @@
 run_id	metric	metric_value	memory_gb	runtime_s	status	description
+poc-semantic	support_recall	0.875	0.5	30	keep	semantic search only baseline
+poc-semantic	utility_at_budget	1.019	0.5	30	keep	semantic search only baseline
+poc-graph	support_recall	1.000	0.5	30	keep	entity graph only baseline
+poc-graph	utility_at_budget	1.200	0.5	30	keep	entity graph only baseline
+poc-heuristic	support_recall	1.000	0.5	30	keep	adaptive heuristic routing
+poc-heuristic	utility_at_budget	1.380	0.5	30	keep	adaptive heuristic routing
+poc-oracle	switching_rate	0.150	0.0	0	keep	15% of questions need substrate switching

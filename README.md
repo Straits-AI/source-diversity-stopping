@@ -49,7 +49,41 @@ prompts/                # Subagent prompt templates
 2. **Learned scoring** — router and bundle scorer from logged trajectories
 3. **Budget-aware RL** — optimize downstream utility directly
 
+## Experiments
+
+### Phase 0 PoC: Substrate Switching Validation
+
+**Location:** `experiments/poc/substrate_switching_poc.py`
+
+**Goal:** Validate the core assumption that within-task substrate switching occurs on real multi-hop tasks and that an adaptive policy outperforms single-substrate baselines.
+
+**Design:**
+- Dataset: 20 bridge-type questions (HotpotQA format, hardcoded examples)
+- Address space A₁: Semantic search via `all-MiniLM-L6-v2` embeddings + cosine similarity
+- Address space A₂: Entity link hop via regex-based NER + co-occurrence graph
+- Three policies: `π_semantic` (always A₁), `π_graph` (always A₂), `π_heuristic` (adaptive: A₁ for entry, A₂ for bridge hops)
+- Oracle analysis: per-step substrate attribution based on which substrate actually finds gold docs
+
+**Key Results (2026-04-04):**
+
+| Policy | SupportRecall | StepsToFirst | TotalOps |
+|---|---|---|---|
+| π_semantic | 0.875 | 1.00 | 2.15 |
+| π_graph | 1.000 | 1.05 | 5.00 |
+| π_heuristic | 1.000 | 1.00 | 2.00 |
+
+Oracle: **3/20 (15%)** of questions required substrate switching.  
+Step 1 oracle: A₁=100%. Step 2 oracle: A₂=100% (only for switch cases).
+
+**Interpretation:** `π_heuristic` achieves full recall (1.000) at the same speed as semantic search (StepsToFirst=1.00) and at less than half the operations cost of `π_graph` (2.00 vs 5.00). The 15% switching rate is lower than the 60-80% hypothesis — this is partially a data artefact (examples where both gold paragraphs share entity tokens with the question, making them both recoverable in one semantic step). The core mechanism is validated on the 3 bridge cases that require switching; the heuristic correctly handles them at no cost penalty.
+
+**Next steps:** Re-run with HotpotQA distractor split (full download) to get authentic bridge questions with more implicit bridge entities. Expect switching rate to increase substantially with harder examples.
+
+**Raw results:** `experiments/poc/poc_results.json`  
+**Dependencies:** `experiments/poc/requirements.txt` (`sentence-transformers>=2.2.0`, `datasets>=2.0.0`, `numpy>=1.21.0`)
+
 ## Status
 
 Phase 0: Research setup — complete.
+Phase 0 PoC: Substrate switching validation — complete (see Experiments section above).
 Phase 1: Literature review — pending.
