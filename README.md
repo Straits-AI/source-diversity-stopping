@@ -309,6 +309,39 @@ Tests hypothesis H2: AEA should show larger gains on harder multi-hop questions 
 
 **Caveat:** Results are on synthetic data designed with uniform low-lexical-overlap properties across all hop counts; real MuSiQue exhibits steeper per-hop lexical overlap gradients that would likely amplify H2 signal.
 
+### LLM Answer Generation — EM and F1 (Phase 4g)
+
+**Runner:** `experiments/run_with_llm_answers.py`
+**Answer generator:** `experiments/aea/answer_generator.py`
+**Results:** `experiments/results/llm_answers.json`
+
+Adds downstream answer quality (EM, F1) to the retrieval-only evaluation.  After each
+policy's retrieval phase, the workspace passages are passed to an LLM (qwen/qwen3.6-plus:free
+via OpenRouter) to generate a short, direct answer.  Answers are scored against gold using
+the existing `metrics.py` functions.  Utility@Budget is recomputed as
+`F1 × (1 + 0.5 × SupportPrecision) − 0.3 × NormalisedOps`.
+
+**Results (N=50 HotpotQA bridge questions, qwen/qwen3.6-plus:free fallback via OpenRouter):**
+
+| Policy | EM | F1 | SupportRecall | AvgOps | Utility@Budget |
+|--------|----|----|--------------|--------|----------------|
+| pi_semantic | 0.4800 | 0.5998 | 0.7500 | 2.00 | 0.6666 |
+| pi_lexical | 0.4600 | 0.6015 | 0.7600 | 2.00 | 0.6699 |
+| pi_entity | 0.4800 | 0.6029 | 0.7000 | 3.00 | 0.6473 |
+| pi_ensemble | **0.5600** | **0.6968** | **0.9500** | 3.00 | **0.7363** |
+| pi_aea_heuristic | 0.5000 | 0.6094 | 0.7800 | 1.16 | 0.6894 |
+
+**Key findings:**
+- AEA EM vs best baseline EM: 0.5000 vs 0.5600 (delta = −0.0600)
+- AEA F1 vs best baseline F1: 0.6094 vs 0.6968 (delta = −0.0874)
+- **Better retrieval (AEA) does NOT straightforwardly translate to better answers here.** The
+  Ensemble policy dominates on EM, F1, SupportRecall, and Utility@Budget at N=50.
+- AEA's advantage lies in efficiency (1.16 avg ops vs 3.00 for Ensemble), not raw answer quality.
+- API: 244 calls, 273,958 tokens, 1 error; qwen3.6-plus:free used as fallback (gemma-3-12b-it
+  rate-limited; qwen served as the effective generation model for most examples).
+
+---
+
 ### Multi-Seed Statistical Validation (Phase 4f)
 
 **Runner:** `experiments/run_multiseed.py`
@@ -362,4 +395,9 @@ Phase 4: Full experiments — in progress.
   - Phase 4e: MuSiQue multi-hop QA benchmark — complete (see below).
   - Phase 4f: Multi-seed statistical validation — complete (N=500, 5 seeds, bootstrap CIs,
     permutation tests; AEA advantage over all baselines is statistically significant, p<0.0001).
-  - Next: BRIGHT-style runs, LLM-based answer generation for EM/F1.
+  - Phase 4g: LLM-based answer generation — complete (N=50, qwen/qwen3.6-plus:free via OpenRouter;
+    see `experiments/run_with_llm_answers.py` and `experiments/results/llm_answers.json`).
+Phase 5: Analysis — complete. Key finding: routing avoidance > positive routing.
+Phase 6: Paper writing — complete (v2 draft with all revisions).
+  Paper: `paper/` directory, 7 sections + appendix + comparison table.
+  Title: "Adaptive Retrieval Routing: When Knowing What Not To Do Beats Choosing the Right Tool"
