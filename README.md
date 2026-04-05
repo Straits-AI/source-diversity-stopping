@@ -55,6 +55,7 @@ experiments/aea/        # Core AEA framework (Phase 4)
 experiments/configs/    # Configuration files
 data/                   # Datasets, intermediate results
 paper/                  # Living document sections
+  comparison_table.md   # Qualitative comparison: AEA vs FLARE, Self-RAG, Adaptive-RAG, IRCoT, CRAG
 paper/figures/          # Generated plots and diagrams
 prompts/                # Subagent prompt templates
 ```
