@@ -39,14 +39,14 @@ from .base import Policy
 # more reliable on the free tier (same as answer_generator.py).
 # NOTE: qwen/qwen3.6-plus:free can hang indefinitely on the free tier.
 #       We use gemma as primary for reliability; qwen is the intended spec model.
-_ROUTER_MODEL = "google/gemma-3-12b-it:free"   # fast, reliable
+_ROUTER_MODEL = "openai/gpt-oss-120b"   # reasoning model, paid but very cheap (~$0.00002/call)
 _ROUTER_SPEC_MODEL = "qwen/qwen3.6-plus:free"  # spec-specified (slow on free tier)
 _ROUTER_FALLBACK_MODEL = "meta-llama/llama-3.2-3b-instruct:free"  # second fallback
 _API_BASE_URL = "https://openrouter.ai/api/v1"
 # Use explicit per-phase timeouts so hung connections are killed after 20s read
 _REQUEST_TIMEOUT = httpx.Timeout(connect=10.0, read=20.0, write=10.0, pool=5.0)
 _RETRY_DELAY = 2.0        # seconds before fallback retry
-_CALL_DELAY = 0.5         # seconds between consecutive calls
+_CALL_DELAY = 0.5         # seconds between consecutive calls (paid model, no rate limit concerns)
 _DEFAULT_MAX_STEPS = 5    # hard cap per question
 _DEFAULT_TOP_K = 5
 _CONTENT_PREVIEW_CHARS = 100   # chars per workspace item in the prompt
@@ -185,6 +185,15 @@ class LLMRoutedPolicy(Policy):
                 operation=Operation.STOP,
             )
 
+        # Step 0: always semantic search (need at least one retrieval
+        # before the LLM can reason about evidence sufficiency)
+        if state.step == 0:
+            return Action(
+                address_space=AddressSpaceType.SEMANTIC,
+                operation=Operation.SEARCH,
+                params={"query": state.query, "top_k": 5},
+            )
+
         # Build prompt
         prompt = self._build_prompt(state)
 
@@ -248,7 +257,7 @@ class LLMRoutedPolicy(Policy):
             response = self._client.chat.completions.create(
                 model=model,
                 messages=[{"role": "user", "content": prompt}],
-                max_tokens=16,      # We only need one action token
+                max_tokens=200,     # Reasoning models need tokens for thinking before answering
                 temperature=0.0,
             )
             self.total_routing_calls += 1

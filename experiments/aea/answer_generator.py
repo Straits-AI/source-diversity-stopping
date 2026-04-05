@@ -20,10 +20,10 @@ from openai import OpenAI
 # Constants
 # ─────────────────────────────────────────────────────────────────────────────
 
-# Primary: gemma-3-12b is consistently fast (~3-5s) and reliable.
+# Primary: gpt-oss-120b is a reasoning model, very cheap (~$0.00002/call).
 # Qwen3.6-plus is the spec-specified model but can take 10-60s on the free tier.
 # We use gemma as primary for reliability and note qwen as the intended model.
-_DEFAULT_MODEL = "google/gemma-3-12b-it:free"
+_DEFAULT_MODEL = "openai/gpt-oss-120b"
 _FALLBACK_MODEL = "qwen/qwen3.6-plus:free"
 _API_BASE_URL = "https://openrouter.ai/api/v1"
 _API_KEY = os.environ.get("OPENROUTER_API_KEY", "")
@@ -142,7 +142,7 @@ class AnswerGenerator:
             response = self.client.chat.completions.create(
                 model=model,
                 messages=[{"role": "user", "content": prompt}],
-                max_tokens=64,
+                max_tokens=300,  # Reasoning model needs tokens for thinking
                 temperature=0.0,
             )
             self.total_calls += 1

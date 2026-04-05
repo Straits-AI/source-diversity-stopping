@@ -1,0 +1,96 @@
+{
+  "retrieval": {
+    "pi_semantic": {
+      "exact_match": 0.0,
+      "f1": 0.0419,
+      "support_recall": 0.75,
+      "support_precision": 0.3,
+      "bundle_coverage": 0.75,
+      "utility_at_budget": 0.0214,
+      "steps_taken": 2.0,
+      "tokens_used": 1334.12,
+      "latency_ms_total": 42.404,
+      "operations_used": 2.0
+    },
+    "pi_lexical": {
+      "exact_match": 0.0,
+      "f1": 0.044,
+      "support_recall": 0.81,
+      "support_precision": 0.324,
+      "bundle_coverage": 0.81,
+      "utility_at_budget": 0.025,
+      "steps_taken": 2.0,
+      "tokens_used": 1496.7,
+      "latency_ms_total": 1.0251,
+      "operations_used": 2.0
+    },
+    "pi_ensemble": {
+      "exact_match": 0.0,
+      "f1": 0.044,
+      "support_recall": 0.94,
+      "support_precision": 0.2436,
+      "bundle_coverage": 0.94,
+      "utility_at_budget": 0.0112,
+      "steps_taken": 3.0,
+      "tokens_used": 1908.94,
+      "latency_ms_total": 61.9022,
+      "operations_used": 3.0
+    },
+    "pi_aea_heuristic": {
+      "exact_match": 0.0,
+      "f1": 0.039,
+      "support_recall": 0.795,
+      "support_precision": 0.2957,
+      "bundle_coverage": 0.795,
+      "utility_at_budget": 0.0323,
+      "steps_taken": 1.21,
+      "tokens_used": 821.32,
+      "latency_ms_total": 53.3636,
+      "operations_used": 1.21
+    },
+    "pi_llm_routed": {
+      "exact_match": 0.0,
+      "f1": 0.038,
+      "support_recall": 0.82,
+      "support_precision": 0.276,
+      "bundle_coverage": 0.82,
+      "utility_at_budget": 0.0092,
+      "steps_taken": 2.44,
+      "tokens_used": 1633.24,
+      "latency_ms_total": 31.472,
+      "operations_used": 2.44
+    }
+  },
+  "e2e": {
+    "pi_semantic": {
+      "em": 0.0,
+      "f1": 0.0,
+      "recall": 0.75,
+      "ops": 2.0
+    },
+    "pi_lexical": {
+      "em": 0.0,
+      "f1": 0.0,
+      "recall": 0.81,
+      "ops": 2.0
+    },
+    "pi_ensemble": {
+      "em": 0.0,
+      "f1": 0.0,
+      "recall": 0.94,
+      "ops": 3.0
+    },
+    "pi_aea_heuristic": {
+      "em": 0.0,
+      "f1": 0.0,
+      "recall": 0.795,
+      "ops": 1.21
+    },
+    "pi_llm_routed": {
+      "em": 0.0,
+      "f1": 0.0,
+      "recall": 0.835,
+      "ops": 2.48
+    }
+  }
+}
