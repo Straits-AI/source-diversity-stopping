@@ -309,6 +309,40 @@ Tests hypothesis H2: AEA should show larger gains on harder multi-hop questions 
 
 **Caveat:** Results are on synthetic data designed with uniform low-lexical-overlap properties across all hop counts; real MuSiQue exhibits steeper per-hop lexical overlap gradients that would likely amplify H2 signal.
 
+### Multi-Seed Statistical Validation (Phase 4f)
+
+**Runner:** `experiments/run_multiseed.py`
+**Results:** `experiments/results/multiseed_hotpotqa.json`
+
+Addresses reviewer concern: "N=100 with single seed provides no error bars, confidence intervals, or significance tests."
+
+**Design:**
+- N=500 bridge questions from HotpotQA distractor validation (5x the previous baseline)
+- 5 seeds [42, 123, 456, 789, 1024] — each seed selects a different 500-question subset (shuffled) from the 5,918 available bridge questions, giving genuine across-seed variance
+- Bootstrap 95% CIs: 1,000 resamples of per-example scores within each seed's evaluation
+- Paired permutation test: 10,000 iterations, AEA vs each baseline on Utility@Budget
+- Effect size: Cohen's d (paired differences)
+
+**Results (N=500, Seeds=5):**
+
+| Policy | SupportRecall (mean ± std) | AvgOps | Utility@Budget (mean ± std [95% CI]) |
+|--------|---------------------------|--------|--------------------------------------|
+| pi_semantic | 0.7966 ± 0.0109 | 2.00 | 0.0129 ± 0.0013 [0.0099, 0.0165] |
+| pi_lexical  | 0.7718 ± 0.0157 | 2.00 | 0.0115 ± 0.0022 [0.0083, 0.0147] |
+| pi_entity   | 0.7316 ± 0.0205 | 3.00 | -0.0342 ± 0.0010 [-0.0362, -0.0319] |
+| pi_ensemble | 0.9292 ± 0.0050 | 3.00 | -0.0015 ± 0.0019 [-0.0047, 0.0019] |
+| pi_aea      | 0.8104 ± 0.0093 | 1.15 | **0.0322 ± 0.0020 [0.0286, 0.0357]** |
+
+**Statistical Tests (AEA vs baselines, metric: Utility@Budget):**
+
+| Comparison | Delta | p-value | Cohen's d | Sig. at p<0.05? |
+|---|---|---|---|---|
+| AEA vs pi_lexical  | +0.0207 | <0.0001 | 0.273 | YES |
+| AEA vs pi_semantic | +0.0192 | <0.0001 | 0.807 | YES |
+| AEA vs pi_ensemble | +0.0337 | <0.0001 | 0.440 | YES |
+
+AEA achieves the highest Utility@Budget across all seeds with non-overlapping 95% CIs vs all baselines. All three pairwise comparisons are statistically significant (p < 0.0001 by paired permutation test). Best baseline is pi_semantic; Cohen's d = 0.807 (large effect size). Total runtime: 26.8 min.
+
 ---
 
 ## Status
@@ -326,4 +360,6 @@ Phase 4: Full experiments — in progress.
   - Phase 4d: Ablation study — complete (H4 test: routing selectivity, not routing per se,
     is the key mechanism; always_hop catastrophically worsens results).
   - Phase 4e: MuSiQue multi-hop QA benchmark — complete (see below).
+  - Phase 4f: Multi-seed statistical validation — complete (N=500, 5 seeds, bootstrap CIs,
+    permutation tests; AEA advantage over all baselines is statistically significant, p<0.0001).
   - Next: BRIGHT-style runs, LLM-based answer generation for EM/F1.
