@@ -1,49 +1,47 @@
 # 6 Discussion
 
-## 6.1 Reframing Adaptive Retrieval as Negative Selection
+## 6.1 The Stopping-Recall Tradeoff
 
-The motivating thesis was that an adaptive agent should learn to select the right substrate. The evidence suggests a more precise characterization: the primary value of adaptation lies in identifying which operations are unnecessary and avoiding them.
+The divergence between retrieval-only and end-to-end evaluation reveals a fundamental tradeoff in adaptive retrieval routing.
 
-This reframing has practical implications. Under the original framing, a router must learn a positive assignment function mapping queries to substrates. Under the revised framing, the router's primary responsibility is a simpler binary judgment: is the current coverage sufficient, or must the agent escalate? Default behavior is the cheapest operation plus halt; escalation is the exception.
+Under retrieval-only evaluation, where cost is penalized but answer quality is proxied by support recall alone, the optimal strategy is aggressive stopping: retrieve just enough evidence and avoid unnecessary operations. AEA excels in this regime, achieving the highest Utility@Budget through cost efficiency (1.15 operations vs 2.00–3.00 for baselines).
 
-Negative selection is substantially easier to learn and audit. A coverage sufficiency check can be grounded in observable signals — passage overlap, confidence scores, entity resolution — whereas positive substrate selection requires implicit reasoning about modality-query affinity.
+Under end-to-end evaluation, where a language model generates answers from the retrieved evidence, the calculus shifts. Higher recall provides the LLM with more relevant passages, improving answer quality enough to offset the additional retrieval cost. The ensemble policy — which queries all substrates unconditionally — wins in this regime despite consuming 2.6x the operations of AEA.
 
-This perspective clarifies why π_ensemble fails despite its high recall: it applies positive selection of all substrates unconditionally. Its recall of 0.940 is highest, yet U@B is nearly zero (0.0028), because the cost of comprehensive coverage is not recoverable under budget-aware evaluation. Adaptive retrieval under resource constraints is fundamentally a problem of restraint, not coverage maximization.
+This tradeoff is not a failure of the adaptive routing framework but rather a calibration question: **how aggressively should the policy stop?** The current coverage threshold (2 high-relevance items from 2 sources) is too aggressive for end-to-end tasks. A learned stopping policy trained on downstream answer quality, rather than on retrieval proxy metrics, could find the optimal tradeoff point. The trajectory data collected during our experiments — operation sequences, coverage signals, per-step recall, and now downstream F1 — constitutes a natural training signal for such a policy.
 
-## 6.2 When Adaptive Routing Provides the Greatest Benefit
+## 6.2 Routing Avoidance vs. Positive Routing
 
-Adaptive routing provides the greatest benefit when the action space contains expensive operations that are frequently unnecessary. This condition holds on HotpotQA, where entity-hop traversal is costly and only required for a subset, yielding 67% U@B improvement. It holds less strongly on Heterogeneous v2, where semantic retrieval is already a strong default.
+The ablation analysis reveals that the current heuristic policy's value comes from knowing what *not* to do (routing avoidance) rather than from knowing what *to* do (positive substrate selection). This finding deserves careful interpretation.
 
-Adaptive routing is additionally most beneficial under heterogeneous workloads where no single substrate dominates across task types. The per-task breakdown confirms this: AEA leads on multi-step tasks while falling behind on single-substrate tasks.
+It does not imply that positive routing is unimportant — oracle analysis shows 44% of questions require within-task substrate switching, and a policy that could reliably identify these questions would capture additional value. Rather, it shows that **heuristic positive routing is hard**: the current multi-hop detection patterns do not reliably distinguish questions that benefit from entity hops from those that do not. Removing entity hops entirely slightly improves performance on lexically-rich data, because the false-positive cost of unnecessary hops exceeds the true-positive benefit of necessary ones.
 
-Conversely, adaptive routing provides minimal value when a single substrate dominates uniformly and when budget constraints are not binding.
+The practical implication is a design principle: **default to restraint.** Build retrieval systems that default to the cheapest operation and require positive evidence of a coverage gap before escalating. This is the opposite of the ensemble approach, which defaults to comprehensiveness and pays for it. Under most budget-aware evaluation regimes, restraint outperforms comprehensiveness at the single-substrate level — though as Section 5.2 shows, the advantage narrows when downstream answer quality is measured.
 
-## 6.3 Limitations
+## 6.3 Positioning Against Existing Adaptive Retrieval Systems
 
-Several limitations constrain generalizability:
+Our comparison with FLARE, Self-RAG, Adaptive-RAG, IRCoT, and CRAG (Table 6 in the appendix) reveals that AEA occupies a distinct niche: it is the only system that (a) routes across qualitatively different substrate types (dense, sparse, graph), (b) includes an explicit cost model in evaluation, and (c) treats the null action (stopping) as a first-class routing decision with estimated value.
 
-1. **Retrieval-only evaluation.** No downstream answer generation stage. U@B does not measure whether retrieved passages enable correct answers.
+However, we note important limitations of this comparison. The systems above report downstream QA accuracy after full LLM generation on standard benchmarks with standard metrics. Our primary results use a retrieval-only proxy metric on a smaller evaluation set. Direct numerical comparison is not valid. The comparison table should be read as a positioning analysis — showing which design dimensions each system covers — rather than as a performance ranking.
 
-2. **Heuristic policy only.** Routing decisions are hand-designed rules, not learned from data. A learned router could address the over-searching failures on Low Lexical Overlap tasks.
+## 6.4 Limitations
 
-3. **Three address spaces.** Real environments include web search, tool invocation, structured databases. Additional modalities may produce different routing dynamics.
+1. **End-to-end evaluation is preliminary.** The LLM answer generation results (N=50, free-tier model) are smaller-scale and noisier than the retrieval-only results (N=500, bootstrap CIs). The finding that ensemble beats AEA on end-to-end U@B should be validated at larger scale with a stronger model.
 
-4. **Synthetic benchmark.** Heterogeneous v2 is constructed, not naturally occurring. External benchmarks (BRIGHT, NoLiMa) are needed for broader validation.
+2. **Heuristic policy only.** The routing decisions are hand-designed rules. A learned router trained on trajectory data could address both the over-searching failures on single-substrate tasks and the under-routing failures on multi-hop tasks.
 
-5. **Single seed, no significance testing.** N=100 per benchmark. Results should be interpreted with appropriate caution.
+3. **Three address spaces.** Real retrieval environments include web search, tool invocation, structured databases, and code search. The cost differentials across these modalities are larger than in our setup, potentially amplifying the benefit of selective avoidance.
 
-6. **MuSiQue unavailable.** The third benchmark used synthetic fallback data (N=40), limiting external validation.
+4. **Synthetic benchmark.** The Heterogeneous v2 benchmark is author-constructed. While entity and lexical isolation are programmatically validated, the task distribution may not reflect real-world heterogeneity.
 
-## 6.4 Future Work
+5. **No statistical testing on end-to-end results.** The N=50 end-to-end evaluation does not include bootstrap CIs or permutation tests. This limits the confidence of comparisons in that regime.
 
-Several directions follow from the evidence:
+## 6.5 Future Work
 
-**Learned router.** Trajectory data from evaluation provides natural supervision for training a coverage sufficiency classifier, addressing over-searching and under-routing failures.
+Three directions follow from the evidence:
 
-**Step-conditional routing.** Oracle trajectories show strong step-position preferences (semantic at Step 1, entity at Step 2). A step-conditioned router may reduce unnecessary entity invocations.
+**Learned stopping policy.** The trajectory data from all experiments — operation sequences, coverage signals, per-step recall, and downstream F1 — provides supervision for training a stopping classifier. The key question: can a learned policy find the stopping threshold that optimizes end-to-end answer quality rather than retrieval proxy metrics?
 
-**Expanded address spaces.** Web retrieval, tool-augmented search, and structural navigation would test whether selective avoidance generalizes. Cost differentials are larger across these modalities, potentially amplifying U@B benefits.
+**Step-conditional routing.** Oracle trajectories show step-position preferences (semantic at step 1, entity at step 2). A router conditioned on step position could reduce false-positive entity invocations while preserving true-positive ones.
 
-**Full pipeline evaluation.** Coupling retrieval with an LLM reader and measuring end-to-end answer accuracy would validate whether U@B improvements translate downstream.
-
-**Budget-aware RL.** Training the policy directly on a reward that penalizes operation cost is the natural formulation for joint optimization.
+**Expanded substrates and external benchmarks.** Web search, tool execution, and structural navigation would test whether selective avoidance generalizes to larger cost differentials. BRIGHT and NoLiMa would test whether the advantage grows on reasoning-intensive tasks with low lexical overlap.
