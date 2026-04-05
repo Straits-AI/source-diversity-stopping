@@ -52,6 +52,7 @@ experiments/aea/        # Core AEA framework (Phase 4)
     heuristic.py        # π_aea_heuristic (adaptive hand-designed routing)
     ensemble.py         # π_ensemble (query all substrates)
     ablations.py        # Ablation variants (no_early_stop, semantic_smart_stop, no_entity_hop, always_hop, no_workspace_mgmt)
+    llm_routed.py       # π_llm_routed (LLM makes routing decisions at each step)
 experiments/configs/    # Configuration files
 data/                   # Datasets, intermediate results
 paper/                  # Living document sections
@@ -401,3 +402,62 @@ Phase 5: Analysis — complete. Key finding: routing avoidance > positive routin
 Phase 6: Paper writing — complete (v2 draft with all revisions).
   Paper: `paper/` directory, 7 sections + appendix + comparison table.
   Title: "Adaptive Retrieval Routing: When Knowing What Not To Do Beats Choosing the Right Tool"
+
+---
+
+### LLM-Routed AEA (Phase 4h — Main Experiment)
+
+**Policy:** `experiments/aea/policies/llm_routed.py` — `LLMRoutedPolicy`
+**Runner:** `experiments/run_llm_routed.py`
+**Results:** `experiments/results/llm_routed.json`
+
+Replaces the hand-designed heuristic router with an LLM that reasons about evidence
+sufficiency at each step.  At each routing step the LLM receives the question, the
+current workspace contents (first 100 chars per item), and the list of available actions
+(STOP / SEMANTIC_SEARCH / LEXICAL_SEARCH / ENTITY_HOP), and responds with a single token.
+
+**Model:** `google/gemma-3-12b-it:free` (primary), `meta-llama/llama-3.2-3b-instruct:free`
+(fallback); `qwen/qwen3.6-plus:free` is the spec-intended router but hangs indefinitely on the
+free tier.  API: OpenRouter.  Max 5 routing steps per question.
+
+**Results (N=100 HotpotQA bridge questions):**
+
+Retrieval Metrics:
+
+| Policy | SupportRecall | SupportPrec | AvgOps | Retrieval U@B |
+|---|---|---|---|---|
+| pi_semantic | 0.7500 | 0.3000 | 2.00 | 0.0149 |
+| pi_lexical | 0.8100 | 0.3240 | 2.00 | 0.0169 |
+| pi_ensemble | 0.9400 | 0.2436 | 3.00 | 0.0028 |
+| pi_aea_heuristic | 0.7950 | 0.2957 | 1.21 | 0.0282 |
+| pi_llm_routed | 0.5400 | 0.5245 | 1.29 | 0.0008 |
+
+End-to-End Metrics (with LLM answers):
+
+| Policy | EM | F1 | SupportRecall | AvgOps | End-to-End U@B |
+|---|---|---|---|---|---|
+| pi_semantic | 0.4800 | 0.5922 | 0.7500 | 2.00 | 0.7962 |
+| pi_lexical | 0.5200 | 0.6505 | 0.8100 | 2.00 | 0.8881 |
+| pi_ensemble | **0.6300** | **0.7505** | **0.9400** | 3.00 | **1.0477** |
+| pi_aea_heuristic | 0.5300 | 0.6500 | 0.7950 | 1.21 | 0.9027 |
+| pi_llm_routed | 0.3800 | 0.4336 | 0.5400 | 1.29 | 0.5953 |
+
+Routing Analysis (LLM-routed):
+- Average steps before STOP: 1.29
+- Action distribution: STOP=41.1%, SEMANTIC=20.1%, LEXICAL=17.4%, ENTITY_HOP=21.5%
+- Questions where LLM stopped after 1 step: 75.0%
+- Questions where LLM used 3+ steps: 15.0%
+- Routing API: 171 calls, 50,433 tokens, 96 errors (all due to free-tier 429 rate limits → defaulted to STOP)
+
+**Key findings:**
+- The 96 routing API errors (56% error rate) severely degraded results: most routing decisions
+  defaulted to STOP, making the policy nearly equivalent to zero-shot stopping.
+- SupportRecall dropped to 0.54 vs 0.94 for ensemble — lower than any baseline — because the
+  policy frequently stopped before retrieving anything useful.
+- The high precision (0.52 vs 0.24–0.32 for baselines) suggests that when the LLM DOES decide
+  to retrieve, it makes targeted decisions; precision is high because workspace has few items.
+- **Hypothesis NOT confirmed under these API conditions:** results are confounded by rate-limiting.
+  Re-run with a paid OpenRouter key to get valid LLM routing decisions for all examples.
+- Architecture is correct; the policy, prompt, fallback chain, and tracking code all function
+  correctly as demonstrated by the N=10 smoke test (only 2/20 errors, decision distribution
+  STOP=47.6%, SEMANTIC=23.8%, LEXICAL=23.8%, ENTITY_HOP=4.8%).
