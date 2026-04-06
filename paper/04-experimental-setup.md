@@ -39,7 +39,14 @@ Two design invariants are enforced programmatically: (1) **Entity isolation** â€
 | $\pi_\text{lexical}$ | BM25 via rank_bm25, top-k by BM25 score | Lexical only |
 | $\pi_\text{entity}$ | Regex NER + entity co-occurrence graph + BFS | Entity only |
 | $\pi_\text{ensemble}$ | Query all substrates, merge and deduplicate | All (no routing) |
-| $\pi_\text{aea}$ | Coverage-driven adaptive routing (proposed) | All (with routing) |
+| $\pi_\text{aea}$ | Coverage-driven adaptive routing (proposed) | All (heuristic routing) |
+| $\pi_\text{llm}$ | LLM reasons about evidence sufficiency at each step (gpt-oss-120b) | All (LLM routing) |
+
+$\pi_\text{llm}$ receives the question, current workspace contents, and available actions at each step, and responds with a single routing decision (STOP, SEMANTIC_SEARCH, LEXICAL_SEARCH, or ENTITY_HOP). It always performs semantic search at step 0; from step 1 onward, the LLM decides. This policy tests whether LLM-guided positive routing outperforms the heuristic's coverage-driven stopping.
+
+### Answer Generation
+
+For end-to-end evaluation, we generate answers from retrieved evidence using gpt-oss-120b (via OpenRouter). The prompt provides the retrieved passages and asks for a short, direct answer. The same model and prompt are used for all policies â€” only the retrieved evidence differs. EM and F1 are scored against gold answers using SQuAD-style normalization.
 
 ## 4.3 Ablation Variants
 

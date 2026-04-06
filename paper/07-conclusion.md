@@ -1,13 +1,11 @@
 # 7 Conclusion
 
-We studied adaptive retrieval routing over heterogeneous address spaces — semantic, lexical, and entity-graph substrates — with a focus on cost-efficient operation selection. Our coverage-driven routing policy achieves statistically significant improvements in retrieval efficiency (1.15 operations vs 2.00–3.00 for baselines, p < 0.0001, Cohen's d = 0.807) while maintaining the highest support recall on HotpotQA Bridge (N=500).
+We studied adaptive retrieval routing over heterogeneous address spaces with a focus on the tradeoff between retrieval comprehensiveness and cost efficiency. Three findings emerge.
 
-Three findings emerge from the experiments:
+First, **a simple coverage-driven stopping rule outperforms both comprehensive retrieval and LLM-guided routing** on end-to-end Utility@Budget. The heuristic AEA policy (U@B 0.760) beats the ensemble (0.731) by stopping at 1.21 average operations while maintaining competitive answer quality (F1 0.630 vs 0.701). This result is statistically validated on retrieval metrics (N=500, p < 0.0001, Cohen's d = 0.807).
 
-First, **routing avoidance dominates positive routing** in the current heuristic policy. The ability to recognize sufficient evidence and stop — rather than the ability to select the optimal next substrate — accounts for the dominant share of the cost-efficiency advantage. Forcing unconditional escalation is catastrophic; removing entity hops slightly improves performance on lexically-rich data.
+Second, **LLM-based routing achieves genuine positive substrate selection** — the LLM router uses all four action types with per-question variation and achieves higher recall (0.845) than the heuristic (0.795). But this intelligence is not yet cost-efficient: 2.54 operations for marginal quality gains produce lower overall utility (0.652).
 
-Second, **the evaluation regime determines the optimal stopping threshold.** Under retrieval-only evaluation, aggressive stopping is optimal and AEA leads all policies. Under end-to-end evaluation with LLM answer generation, the ensemble policy's higher recall produces better answers despite higher cost, and AEA is second. This divergence identifies stopping threshold calibration — not substrate selection — as the key open challenge.
+Third, the resulting hierarchy — **smart stopping > brute force > smart searching** — challenges the default assumption in adaptive retrieval. The primary value under budget constraints is knowing when to stop, not knowing what to do. This reframes the design problem: rather than optimizing substrate selection, practitioners should optimize the stopping threshold.
 
-Third, **multi-substrate access with any routing policy outperforms single-substrate retrieval.** AEA beats all individual substrates on both evaluation regimes, confirming that heterogeneous address space support is valuable even when the routing policy is imperfect.
-
-The gap between aggressive stopping (where heuristic policies excel) and calibrated stopping (where learned policies are needed) defines the natural next step. The trajectory data collected during this work — including per-step coverage signals and downstream answer quality — provides the training signal for closing this gap.
+The gap between heuristic stopping efficiency and LLM routing intelligence defines the key open challenge: **calibrated stopping** — a policy that stops as efficiently as a simple coverage check on easy questions while routing as intelligently as an LLM on hard ones. The trajectory data and Utility@Budget framework introduced here provide the foundation for learning such a policy.

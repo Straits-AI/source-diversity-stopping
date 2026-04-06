@@ -6,7 +6,7 @@ Recent adaptive retrieval systems address the second failure mode. Self-RAG [Asa
 
 In this paper, we study **coverage-driven retrieval routing**: a policy that operates over multiple heterogeneous retrieval substrates, evaluating after each operation whether the current evidence is sufficient to stop or whether escalation to a different substrate is warranted. The policy defaults to the cheapest available operation (dense retrieval) and escalates only when a coverage gap is detected.
 
-Our central empirical finding is counterintuitive. We expected the primary value of multi-substrate routing to come from *positive selection* — choosing the right substrate for each query. Instead, ablation analysis reveals that the dominant mechanism is **routing avoidance** — knowing when to stop and what *not* to do. On HotpotQA Bridge (N=500, bootstrap confidence intervals reported), the policy completes questions in 1.21 average operations versus 2.00 for fixed baselines, with comparable support recall. Forcing unconditional escalation to all substrates is catastrophic, while removing entity-graph hops entirely slightly *improves* performance on lexically-rich data. The value of adaptive routing, at least for heuristic policies, lies primarily in cost-efficient restraint.
+Our central empirical finding is counterintuitive. We expected the primary value of multi-substrate routing to come from *positive selection* — choosing the right substrate for each query. Instead, the dominant mechanism is **selective stopping** — knowing when evidence is sufficient. On HotpotQA Bridge, the policy achieves the highest end-to-end Utility@Budget (0.760), outperforming both comprehensive retrieval (ensemble, 0.731) and LLM-guided positive routing (0.652). It does this by completing questions in 1.21 average operations versus 2.00–3.00 for baselines (N=500, p < 0.0001, Cohen's d = 0.807). An LLM-based router achieves higher recall (0.845) through genuine multi-substrate reasoning but is not cost-efficient — establishing a hierarchy: **smart stopping > brute force > smart searching**.
 
 Our contributions are:
 
@@ -14,7 +14,7 @@ Our contributions are:
 
 2. **A controlled heterogeneous benchmark** with entity isolation and lexical overlap controls, designed to require cross-substrate navigation (Section 4).
 
-3. **The routing avoidance finding**: under budget-aware evaluation, adaptive retrieval's primary value is selective stopping, not positive substrate selection. This reframes the design problem from "choose the right tool" to "know when to stop" (Section 5).
+3. **The stopping > searching hierarchy**: under budget-aware end-to-end evaluation, a simple stopping rule (U@B 0.760) beats comprehensive retrieval (0.731) and LLM-guided routing (0.652). This establishes that knowing when to stop is more valuable than knowing what to do (Section 5).
 
 4. **A formal framework** modeling multi-substrate retrieval as a constrained decision process with discovery/knowledge state tracking, connecting to the options framework for hierarchical action selection (Appendix A).
 
