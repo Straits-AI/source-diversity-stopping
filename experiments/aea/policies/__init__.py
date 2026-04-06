@@ -8,12 +8,14 @@ LexicalOnlyPolicy     — π_lexical: always use BM25
 EntityOnlyPolicy      — π_entity: always use entity graph
 AEAHeuristicPolicy    — π_aea_heuristic: adaptive hand-designed routing
 EnsemblePolicy        — π_ensemble: query all substrates, merge results
+LLMRoutedPolicy       — π_llm_routed: LLM makes routing decisions at each step
 Policy                — abstract base class for custom policies
 """
 
 from .base import Policy
 from .ensemble import EnsemblePolicy
 from .heuristic import AEAHeuristicPolicy
+from .llm_routed import LLMRoutedPolicy
 from .single_substrate import EntityOnlyPolicy, LexicalOnlyPolicy, SemanticOnlyPolicy
 
 __all__ = [
@@ -23,4 +25,5 @@ __all__ = [
     "EntityOnlyPolicy",
     "AEAHeuristicPolicy",
     "EnsemblePolicy",
+    "LLMRoutedPolicy",
 ]
