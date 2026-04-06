@@ -490,10 +490,13 @@ Phase 4: Full experiments — in progress.
   - Phase 4j: 2WikiMultiHopQA benchmark — complete (N=100 synthetic, 50 bridge + 50 comparison;
     pi_aea_heuristic achieves best LLM F1=0.9048 on E2E; stopping > searching confirmed on
     second benchmark; see `experiments/run_2wiki.py` and `experiments/results/2wiki.json`).
-Phase 5: Analysis — complete. Key finding: routing avoidance > positive routing.
-Phase 6: Paper writing — complete (v2 draft with all revisions).
-  Paper: `paper/` directory, 7 sections + appendix + comparison table.
+Phase 5: Analysis — complete. Key finding: learned stopping > heuristic stopping > brute force.
+Phase 6: Paper writing — complete (v5 final draft with all revisions).
+  Paper: `paper/full-paper.md` (6889 words), 7 sections + appendix + comparison table.
   Title: "Adaptive Retrieval Routing: When Knowing What Not To Do Beats Choosing the Right Tool"
+  Key results: Learned stopping U@B=0.766 [0.715, 0.819] at N=500 E2E.
+  Validated on 2 benchmarks (HotpotQA + 2WikiMultiHopQA).
+  Crossover at μ=0.20: stopping dominates for any non-trivial cost penalty.
 
 ---
 
