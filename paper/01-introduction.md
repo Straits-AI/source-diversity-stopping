@@ -14,7 +14,7 @@ Our contributions are:
 
 2. **A controlled heterogeneous benchmark** with entity isolation and lexical overlap controls, designed to require cross-substrate navigation (Section 4).
 
-3. **The stopping > searching hierarchy**: under budget-aware end-to-end evaluation, a simple stopping rule (U@B 0.760) beats comprehensive retrieval (0.731) and LLM-guided routing (0.652). This establishes that knowing when to stop is more valuable than knowing what to do (Section 5).
+3. **The stopping-vs-searching tradeoff**: under end-to-end evaluation, AEA achieves comparable utility to comprehensive retrieval (0.760 vs 0.731) at 60% lower cost, with a cost-sensitivity crossover at μ=0.25. Sensitivity analysis provides actionable guidance on when stopping beats searching (Section 5).
 
 4. **A formal framework** modeling multi-substrate retrieval as a constrained decision process with discovery/knowledge state tracking, connecting to the options framework for hierarchical action selection (Appendix A).
 

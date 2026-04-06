@@ -2,7 +2,7 @@
 
 ## Abstract
 
-Retrieval-augmented systems typically commit to a fixed number of retrieval operations regardless of whether they are necessary or sufficient. We study coverage-driven retrieval routing: a policy over heterogeneous substrates (semantic, lexical, entity-graph) that evaluates evidence sufficiency after each step and stops when coverage is adequate. On HotpotQA Bridge (N=500, p < 0.0001, Cohen's d = 0.807), the policy achieves the highest support recall (0.810) at the lowest operation count (1.15). On end-to-end evaluation with LLM answer generation (N=100), it achieves the highest Utility@Budget (0.760), outperforming both comprehensive retrieval (ensemble, 0.731) and LLM-guided positive routing (0.652). Ablation analysis reveals the mechanism: the policy's value derives from selective stopping — knowing when evidence is sufficient — rather than from positive substrate selection. Forcing unconditional escalation degrades utility by 0.115. An LLM-based router achieves higher recall (0.845) through genuine multi-substrate reasoning but is not cost-efficient (2.54 ops vs 1.21). The resulting hierarchy — smart stopping > brute force > smart searching — challenges the assumption that adaptive retrieval should optimize substrate selection, and identifies calibrated stopping as the key open problem.
+Retrieval-augmented systems typically commit to a fixed number of retrieval operations regardless of whether they are necessary or sufficient. We study coverage-driven retrieval routing: a policy over heterogeneous substrates (semantic, lexical, entity-graph) that evaluates evidence sufficiency after each step and stops when coverage is adequate. On HotpotQA Bridge (N=500, p < 0.0001, Cohen's d = 0.807), the policy achieves the highest support recall (0.810) at the lowest operation count (1.15). On end-to-end evaluation with LLM answer generation (N=100), it achieves comparable Utility@Budget to comprehensive retrieval (0.760 vs 0.731) while using 60% fewer operations (1.21 vs 3.00), with a cost-sensitivity crossover at μ=0.25. Ablation analysis reveals the mechanism: the policy's value derives from selective stopping — knowing when evidence is sufficient — rather than from positive substrate selection. Forcing unconditional escalation degrades utility by 0.115. An LLM-based router achieves higher recall (0.845) through genuine multi-substrate reasoning but is not cost-efficient (2.54 ops vs 1.21). The resulting hierarchy — smart stopping > brute force > smart searching — challenges the assumption that adaptive retrieval should optimize substrate selection, and identifies calibrated stopping as the key open problem.
 # 1 Introduction
 
 When should a retrieval system stop searching? The dominant paradigm in retrieval-augmented generation commits to a fixed number of retrieval operations — typically one or two calls to a single index — regardless of whether those operations are necessary or sufficient. This rigidity creates two failure modes: wasted computation on queries answerable from a single retrieval step, and insufficient evidence on queries requiring multiple heterogeneous sources.
@@ -19,7 +19,7 @@ Our contributions are:
 
 2. **A controlled heterogeneous benchmark** with entity isolation and lexical overlap controls, designed to require cross-substrate navigation (Section 4).
 
-3. **The stopping > searching hierarchy**: under budget-aware end-to-end evaluation, a simple stopping rule (U@B 0.760) beats comprehensive retrieval (0.731) and LLM-guided routing (0.652). This establishes that knowing when to stop is more valuable than knowing what to do (Section 5).
+3. **The stopping-vs-searching tradeoff**: under end-to-end evaluation, AEA achieves comparable utility to comprehensive retrieval (0.760 vs 0.731) at 60% lower cost, with a cost-sensitivity crossover at μ=0.25. Sensitivity analysis provides actionable guidance on when stopping beats searching (Section 5).
 
 4. **A formal framework** modeling multi-substrate retrieval as a constrained decision process with discovery/knowledge state tracking, connecting to the options framework for hierarchical action selection (Appendix A).
 
@@ -279,7 +279,25 @@ The mechanism is clear: π_aea's F1 (0.630) is 10% lower than the ensemble's (0.
 
 However, this positive routing is not cost-efficient: 2.54 average operations yield only marginally better F1 (0.637 vs 0.630), producing a lower E2E U@B (0.652 vs 0.760). The LLM router over-retrieves relative to the quality gain, spending operations on evidence that doesn't improve the final answer enough to justify the cost.
 
-The policy ranking — heuristic (0.760) > ensemble (0.731) > lexical (0.703) > LLM-routed (0.652) > semantic (0.648) — reveals a hierarchy: **smart stopping > brute force > smart searching** under budget constraints. This is counterintuitive: a simple coverage threshold outperforms both comprehensive retrieval and LLM-guided routing.
+The policy ranking under μ=0.3 — heuristic (0.760) > ensemble (0.731) > lexical (0.703) > LLM-routed (0.652) > semantic (0.648) — suggests: **smart stopping > brute force > smart searching**. However, we note that the E2E gap between AEA and ensemble (0.029) is not statistically significant at N=100 (approximate z=0.68, p=0.49; minimum detectable gap at N=100: 0.083). The statistically validated claim is that AEA achieves **comparable** E2E utility to the ensemble while using 60% fewer operations.
+
+### Cost-Sensitivity Analysis
+
+The ranking depends on the cost penalty μ. Table 2b shows U@B across μ values.
+
+**Table 2b.** E2E Utility@Budget across cost sensitivity μ. Winner in bold.
+
+| μ | π_semantic | π_lexical | π_ensemble | π_aea | π_llm | Winner |
+|---|---|---|---|---|---|---|
+| 0.00 | 0.848 | 0.903 | **1.031** | 0.880 | 0.906 | ensemble |
+| 0.10 | 0.782 | 0.837 | **0.931** | 0.840 | 0.822 | ensemble |
+| 0.20 | 0.715 | 0.770 | 0.831 | **0.800** | 0.737 | ensemble |
+| **0.25** | 0.682 | 0.737 | 0.781 | **0.780** | 0.695 | **crossover** |
+| 0.30 | 0.648 | 0.703 | 0.731 | **0.760** | 0.652 | aea |
+| 0.40 | 0.582 | 0.637 | 0.631 | **0.719** | 0.568 | aea |
+| 0.50 | 0.515 | 0.570 | 0.531 | **0.679** | 0.483 | aea |
+
+The crossover occurs at **μ ≈ 0.25**: below this threshold, comprehensive retrieval (ensemble) dominates because answer quality improvements outweigh cost; above it, cost-efficient stopping (AEA) dominates because marginal retrieval yields diminishing F1 returns. This crossover provides actionable guidance: **when retrieval cost matters (μ ≥ 0.25), use adaptive stopping; when it doesn't (μ < 0.25), use comprehensive retrieval.**
 
 ## 5.3 Heterogeneous Benchmark (N=100)
 
@@ -368,7 +386,7 @@ Direct numerical comparison is not valid: those systems report downstream QA acc
 
 We studied adaptive retrieval routing over heterogeneous address spaces with a focus on the tradeoff between retrieval comprehensiveness and cost efficiency. Three findings emerge.
 
-First, **a simple coverage-driven stopping rule outperforms both comprehensive retrieval and LLM-guided routing** on end-to-end Utility@Budget. The heuristic AEA policy (U@B 0.760) beats the ensemble (0.731) by stopping at 1.21 average operations while maintaining competitive answer quality (F1 0.630 vs 0.701). This result is statistically validated on retrieval metrics (N=500, p < 0.0001, Cohen's d = 0.807).
+First, **a simple coverage-driven stopping rule achieves comparable end-to-end utility to comprehensive retrieval while using 60% fewer operations.** The heuristic AEA policy (U@B 0.760) matches the ensemble (0.731) — a gap that is not statistically significant at N=100 — while completing questions in 1.21 operations versus 3.00. Sensitivity analysis shows AEA dominates when cost matters (μ ≥ 0.25) and ensemble dominates when it doesn't (μ < 0.25). The retrieval advantage is statistically validated (N=500, p < 0.0001, Cohen's d = 0.807).
 
 Second, **LLM-based routing achieves genuine positive substrate selection** — the LLM router uses all four action types with per-question variation and achieves higher recall (0.845) than the heuristic (0.795). But this intelligence is not yet cost-efficient: 2.54 operations for marginal quality gains produce lower overall utility (0.652).
 

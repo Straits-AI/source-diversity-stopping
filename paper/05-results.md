@@ -38,7 +38,25 @@ The mechanism is clear: π_aea's F1 (0.630) is 10% lower than the ensemble's (0.
 
 However, this positive routing is not cost-efficient: 2.54 average operations yield only marginally better F1 (0.637 vs 0.630), producing a lower E2E U@B (0.652 vs 0.760). The LLM router over-retrieves relative to the quality gain, spending operations on evidence that doesn't improve the final answer enough to justify the cost.
 
-The policy ranking — heuristic (0.760) > ensemble (0.731) > lexical (0.703) > LLM-routed (0.652) > semantic (0.648) — reveals a hierarchy: **smart stopping > brute force > smart searching** under budget constraints. This is counterintuitive: a simple coverage threshold outperforms both comprehensive retrieval and LLM-guided routing.
+The policy ranking under μ=0.3 — heuristic (0.760) > ensemble (0.731) > lexical (0.703) > LLM-routed (0.652) > semantic (0.648) — suggests: **smart stopping > brute force > smart searching**. However, we note that the E2E gap between AEA and ensemble (0.029) is not statistically significant at N=100 (approximate z=0.68, p=0.49; minimum detectable gap at N=100: 0.083). The statistically validated claim is that AEA achieves **comparable** E2E utility to the ensemble while using 60% fewer operations.
+
+### Cost-Sensitivity Analysis
+
+The ranking depends on the cost penalty μ. Table 2b shows U@B across μ values.
+
+**Table 2b.** E2E Utility@Budget across cost sensitivity μ. Winner in bold.
+
+| μ | π_semantic | π_lexical | π_ensemble | π_aea | π_llm | Winner |
+|---|---|---|---|---|---|---|
+| 0.00 | 0.848 | 0.903 | **1.031** | 0.880 | 0.906 | ensemble |
+| 0.10 | 0.782 | 0.837 | **0.931** | 0.840 | 0.822 | ensemble |
+| 0.20 | 0.715 | 0.770 | 0.831 | **0.800** | 0.737 | ensemble |
+| **0.25** | 0.682 | 0.737 | 0.781 | **0.780** | 0.695 | **crossover** |
+| 0.30 | 0.648 | 0.703 | 0.731 | **0.760** | 0.652 | aea |
+| 0.40 | 0.582 | 0.637 | 0.631 | **0.719** | 0.568 | aea |
+| 0.50 | 0.515 | 0.570 | 0.531 | **0.679** | 0.483 | aea |
+
+The crossover occurs at **μ ≈ 0.25**: below this threshold, comprehensive retrieval (ensemble) dominates because answer quality improvements outweigh cost; above it, cost-efficient stopping (AEA) dominates because marginal retrieval yields diminishing F1 returns. This crossover provides actionable guidance: **when retrieval cost matters (μ ≥ 0.25), use adaptive stopping; when it doesn't (μ < 0.25), use comprehensive retrieval.**
 
 ## 5.3 Heterogeneous Benchmark (N=100)
 
