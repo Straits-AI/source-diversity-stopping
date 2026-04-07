@@ -28,23 +28,13 @@ At the routing level, RAGRouter [Liu et al., 2025] learns to select among member
 
 AEA draws from this RL tradition the insight that routing and avoidance should be optimized objectives, not hand-coded heuristics. However, where these systems learn substrate-specific or pipeline-specific policies, AEA learns a unified policy over a heterogeneous action space that includes the null action of avoidance.
 
-## 2.4 Structured Memory
+## 2.4 Structured Memory and Context Engineering
 
-Recent work has expanded the memory substrate available to language model agents beyond flat document corpora. MAGMA [arXiv:2601.03236, 2025] constructs a multi-relational graph over conversational history, enabling temporal and social relationship queries; it reports a LoCoMo judge score of 0.700, surpassing flat-retrieval baselines by a substantial margin. Nemori [arXiv:2508.03341, 2025] introduces narrative-unit memory, compressing episodic traces into structured story units and achieving an eighty-eight percent reduction in token consumption at retrieval time without a corresponding drop in recall. A-MEM [arXiv:2502.12110, 2026] organizes agent memory according to Zettelkasten principles, creating note-level indexes that support associative traversal across temporally distant events. Zep [arXiv:2501.13956, 2025] maintains a temporal knowledge graph over conversational context, enabling precise queries about the evolution of facts over time.
+Structured memory systems — MAGMA [arXiv:2601.03236], Nemori [arXiv:2508.03341], A-MEM [arXiv:2502.12110], Zep [arXiv:2501.13956] — demonstrate that memory organizations (graph, narrative, associative, temporal) each excel on different query types, motivating routing policies rather than commitment to a single architecture. None addresses when to stop querying.
 
-These systems each constitute a valuable substrate in the AEA address space. They demonstrate that structured memory is not a monolith: graph-based, narrative-based, associative, and temporal organizations each excel on different query types. This heterogeneity is precisely what motivates a routing policy in AEA rather than commitment to any single memory architecture. Critically, none of these systems addresses the question of when to query structured memory versus flat retrieval versus no retrieval at all — the policy problem that AEA formalizes.
+At the harness level, Meta-Harness [Lee et al., 2026] optimizes which context elements to include in model calls, achieving 7.7-point improvement with 4x fewer tokens. Our work shares this perspective but operates at runtime with explicit state tracking rather than as an offline code-level optimization.
 
-## 2.5 Context Engineering
-
-Context engineering — the systematic design of what information is placed in the model's context window and when — has emerged as a first-class research concern. Anthropic's context engineering guidelines [Anthropic, 2025] articulate best practices for structuring retrieved content, tool outputs, and conversation history to maximize effective utilization of the context window. Context Compression for Tools [arXiv:2407.02043, 2024] addresses the dual problem: when tool outputs are lengthy, aggressive compression is necessary to prevent context bloat from degrading performance on later turns.
-
-The Meta-Harness [Lee et al., 2026] represents the most directly relevant work in this space. It operates at the harness level — the orchestration layer between the model and its tools — and introduces a learned policy for selecting which context elements to include in each model call. On downstream benchmarks it reports a 7.7-point improvement with four times fewer tokens consumed, demonstrating that harness-level optimization is a high-leverage intervention point. AEA shares the harness-level perspective of Meta-Harness but differs in two important ways: Meta-Harness is formulated at the code and prompt level as an offline compilation problem, whereas AEA operates at runtime with explicit state tracking; and Meta-Harness does not model the heterogeneity of retrieval substrates or their differential cost and recall profiles.
-
-## 2.6 Long-Context Evaluation
-
-Evaluating retrieval and memory systems over long contexts presents its own methodological challenges. HELMET [arXiv:2410.02694] demonstrates that performance on synthetic long-context benchmarks often fails to predict performance on downstream tasks, cautioning against evaluation suites that rely solely on needle-in-a-haystack style probes. The Context Rot analysis from Chroma documents a consistent degradation pattern in which all evaluated models suffer declining recall as context length grows, regardless of architecture. NoLiMa, RULER, and LongBench Pro each attempt to construct more ecologically valid long-context evaluation suites, with varying degrees of coverage across task types.
-
-These findings shape AEA's evaluation design. We do not rely on synthetic retrieval benchmarks as our primary measure of success; instead we report performance on downstream QA tasks with budget-controlled evaluation protocols that penalize unnecessary retrieval calls, consistent with the cost-aware framing advocated by SmartRAG and Cost-Aware Retrieval.
+Long-context evaluation work (HELMET, Context Rot, NoLiMa, RULER) demonstrates that synthetic benchmarks poorly predict downstream performance and that all models degrade with context length — motivating our budget-controlled evaluation protocol.
 
 ## 2.7 Positioning
 

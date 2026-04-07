@@ -49,7 +49,7 @@ We also evaluate a learned stopping classifier (gradient boosted tree on 9 works
 
 To test whether the heuristic can be improved, we implement five principled alternatives spanning content-aware scoring, bundle-level assessment, learned classification, requirement decomposition, and question-level routing. All are evaluated on the same clean split (questions 0–499).
 
-**Table 3.** Failed improvement attempts vs. the heuristic.
+**Table 3.** Failed improvement attempts vs. the heuristic. Note: absolute U@B values differ slightly from Table 1 (0.816 vs 0.759 for the heuristic) because each table reflects an independent LLM answer generation run with a non-deterministic model; relative comparisons within each table are valid.
 
 | Approach | Mechanism | AvgOps | E2E U@B | vs Heuristic |
 |---|---|---|---|---|

@@ -31,12 +31,13 @@ We tested four approaches designed to improve on the heuristic's stopping decisi
 | Approach | Mechanism | AvgOps | E2E U@B | vs Heuristic |
 |---|---|---|---|---|
 | Cross-encoder stopping | MS MARCO scores (question, passage) pairs | 3.09 | 0.655 | -0.133 (p<0.0001) |
+| NLI bundle assessment | DeBERTa-v3 NLI on concatenated evidence | 6.09 | 0.433 | -0.383 (p<0.0001) |
 | LLM decomposition | gpt-oss-120b decomposes question into sub-requirements | 2.95 | 0.758 | -0.030 |
 | Learned GBT classifier | Gradient boosted tree on workspace statistics | 5.00 | 0.498 | catastrophic |
 | Embedding router | Question embedding predicts best retrieval strategy | 1.28 | tied | +0.001 |
 | **Heuristic** | **2+ items from 2+ sources** | **1.16** | **0.759** | **--** |
 
-Every sophisticated approach either degrades performance or merely ties. The cross-encoder is significantly worse (p<0.0001); the decomposition approach wastes approximately 2.5x the operations for lower utility; the learned classifier catastrophically fails to generalize; and the embedding router, while successfully routing questions, confirms that the bottleneck is stopping rather than routing.
+All five approaches either degrade performance or merely tie. The NLI result is most informative: it correctly takes the full evidence bundle as premise (addressing the cross-encoder's set function limitation), yet fails even more severely (d=-0.731) because multi-hop questions resist conversion to well-formed entailment hypotheses. A contributing factor is context truncation (DeBERTa-v3-small's 512-token window limits premise length); however, the primary failure mode — that "Were X and Y of the same nationality?" does not translate to a natural NLI hypothesis regardless of evidence quality — is fundamental rather than architectural.
 
 ### 6.4.2 The Structural Signal Thesis
 
@@ -116,9 +117,9 @@ The stopping hierarchy -- structural heuristic > content-aware stopping > learne
 
 ## 6.5 Limitations
 
-1. **Single benchmark for end-to-end.** The E2E results (N=100) use only HotpotQA Bridge. Validation on additional benchmarks (BRIGHT, NoLiMa) is needed.
+1. **E2E evaluation on one benchmark.** End-to-end evaluation with LLM answer generation (N=500, p=0.021) uses only HotpotQA Bridge. BRIGHT and open-domain evaluations are retrieval-only. The E2E effect size is small (d=0.103).
 
-2. **No statistical testing on E2E.** Bootstrap CIs and permutation tests are reported only for the retrieval-only evaluation (N=500). The E2E evaluation (N=100) reports point estimates.
+2. **Non-deterministic LLM answers.** Answer generation via gpt-oss-120b is non-deterministic, producing slight absolute U@B variation across runs (Tables 1 and 3). Relative comparisons within each evaluation are valid.
 
 3. **Custom evaluation metric.** Utility@Budget is author-defined. The specific η and μ values determine the ranking — sensitivity analysis across parameter ranges is reported in Appendix C.
 

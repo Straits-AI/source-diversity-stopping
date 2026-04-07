@@ -64,23 +64,13 @@ At the routing level, RAGRouter [Liu et al., 2025] learns to select among member
 
 AEA draws from this RL tradition the insight that routing and avoidance should be optimized objectives, not hand-coded heuristics. However, where these systems learn substrate-specific or pipeline-specific policies, AEA learns a unified policy over a heterogeneous action space that includes the null action of avoidance.
 
-## 2.4 Structured Memory
+## 2.4 Structured Memory and Context Engineering
 
-Recent work has expanded the memory substrate available to language model agents beyond flat document corpora. MAGMA [arXiv:2601.03236, 2025] constructs a multi-relational graph over conversational history, enabling temporal and social relationship queries; it reports a LoCoMo judge score of 0.700, surpassing flat-retrieval baselines by a substantial margin. Nemori [arXiv:2508.03341, 2025] introduces narrative-unit memory, compressing episodic traces into structured story units and achieving an eighty-eight percent reduction in token consumption at retrieval time without a corresponding drop in recall. A-MEM [arXiv:2502.12110, 2026] organizes agent memory according to Zettelkasten principles, creating note-level indexes that support associative traversal across temporally distant events. Zep [arXiv:2501.13956, 2025] maintains a temporal knowledge graph over conversational context, enabling precise queries about the evolution of facts over time.
+Structured memory systems — MAGMA [arXiv:2601.03236], Nemori [arXiv:2508.03341], A-MEM [arXiv:2502.12110], Zep [arXiv:2501.13956] — demonstrate that memory organizations (graph, narrative, associative, temporal) each excel on different query types, motivating routing policies rather than commitment to a single architecture. None addresses when to stop querying.
 
-These systems each constitute a valuable substrate in the AEA address space. They demonstrate that structured memory is not a monolith: graph-based, narrative-based, associative, and temporal organizations each excel on different query types. This heterogeneity is precisely what motivates a routing policy in AEA rather than commitment to any single memory architecture. Critically, none of these systems addresses the question of when to query structured memory versus flat retrieval versus no retrieval at all — the policy problem that AEA formalizes.
+At the harness level, Meta-Harness [Lee et al., 2026] optimizes which context elements to include in model calls, achieving 7.7-point improvement with 4x fewer tokens. Our work shares this perspective but operates at runtime with explicit state tracking rather than as an offline code-level optimization.
 
-## 2.5 Context Engineering
-
-Context engineering — the systematic design of what information is placed in the model's context window and when — has emerged as a first-class research concern. Anthropic's context engineering guidelines [Anthropic, 2025] articulate best practices for structuring retrieved content, tool outputs, and conversation history to maximize effective utilization of the context window. Context Compression for Tools [arXiv:2407.02043, 2024] addresses the dual problem: when tool outputs are lengthy, aggressive compression is necessary to prevent context bloat from degrading performance on later turns.
-
-The Meta-Harness [Lee et al., 2026] represents the most directly relevant work in this space. It operates at the harness level — the orchestration layer between the model and its tools — and introduces a learned policy for selecting which context elements to include in each model call. On downstream benchmarks it reports a 7.7-point improvement with four times fewer tokens consumed, demonstrating that harness-level optimization is a high-leverage intervention point. AEA shares the harness-level perspective of Meta-Harness but differs in two important ways: Meta-Harness is formulated at the code and prompt level as an offline compilation problem, whereas AEA operates at runtime with explicit state tracking; and Meta-Harness does not model the heterogeneity of retrieval substrates or their differential cost and recall profiles.
-
-## 2.6 Long-Context Evaluation
-
-Evaluating retrieval and memory systems over long contexts presents its own methodological challenges. HELMET [arXiv:2410.02694] demonstrates that performance on synthetic long-context benchmarks often fails to predict performance on downstream tasks, cautioning against evaluation suites that rely solely on needle-in-a-haystack style probes. The Context Rot analysis from Chroma documents a consistent degradation pattern in which all evaluated models suffer declining recall as context length grows, regardless of architecture. NoLiMa, RULER, and LongBench Pro each attempt to construct more ecologically valid long-context evaluation suites, with varying degrees of coverage across task types.
-
-These findings shape AEA's evaluation design. We do not rely on synthetic retrieval benchmarks as our primary measure of success; instead we report performance on downstream QA tasks with budget-controlled evaluation protocols that penalize unnecessary retrieval calls, consistent with the cost-aware framing advocated by SmartRAG and Cost-Aware Retrieval.
+Long-context evaluation work (HELMET, Context Rot, NoLiMa, RULER) demonstrates that synthetic benchmarks poorly predict downstream performance and that all models degrade with context length — motivating our budget-controlled evaluation protocol.
 
 ## 2.7 Positioning
 
@@ -341,7 +331,7 @@ We also evaluate a learned stopping classifier (gradient boosted tree on 9 works
 
 To test whether the heuristic can be improved, we implement five principled alternatives spanning content-aware scoring, bundle-level assessment, learned classification, requirement decomposition, and question-level routing. All are evaluated on the same clean split (questions 0–499).
 
-**Table 3.** Failed improvement attempts vs. the heuristic.
+**Table 3.** Failed improvement attempts vs. the heuristic. Note: absolute U@B values differ slightly from Table 1 (0.816 vs 0.759 for the heuristic) because each table reflects an independent LLM answer generation run with a non-deterministic model; relative comparisons within each table are valid.
 
 | Approach | Mechanism | AvgOps | E2E U@B | vs Heuristic |
 |---|---|---|---|---|
@@ -500,12 +490,13 @@ We tested four approaches designed to improve on the heuristic's stopping decisi
 | Approach | Mechanism | AvgOps | E2E U@B | vs Heuristic |
 |---|---|---|---|---|
 | Cross-encoder stopping | MS MARCO scores (question, passage) pairs | 3.09 | 0.655 | -0.133 (p<0.0001) |
+| NLI bundle assessment | DeBERTa-v3 NLI on concatenated evidence | 6.09 | 0.433 | -0.383 (p<0.0001) |
 | LLM decomposition | gpt-oss-120b decomposes question into sub-requirements | 2.95 | 0.758 | -0.030 |
 | Learned GBT classifier | Gradient boosted tree on workspace statistics | 5.00 | 0.498 | catastrophic |
 | Embedding router | Question embedding predicts best retrieval strategy | 1.28 | tied | +0.001 |
 | **Heuristic** | **2+ items from 2+ sources** | **1.16** | **0.759** | **--** |
 
-Every sophisticated approach either degrades performance or merely ties. The cross-encoder is significantly worse (p<0.0001); the decomposition approach wastes approximately 2.5x the operations for lower utility; the learned classifier catastrophically fails to generalize; and the embedding router, while successfully routing questions, confirms that the bottleneck is stopping rather than routing.
+All five approaches either degrade performance or merely tie. The NLI result is most informative: it correctly takes the full evidence bundle as premise (addressing the cross-encoder's set function limitation), yet fails even more severely (d=-0.731) because multi-hop questions resist conversion to well-formed entailment hypotheses. A contributing factor is context truncation (DeBERTa-v3-small's 512-token window limits premise length); however, the primary failure mode — that "Were X and Y of the same nationality?" does not translate to a natural NLI hypothesis regardless of evidence quality — is fundamental rather than architectural.
 
 ### 6.4.2 The Structural Signal Thesis
 
@@ -585,9 +576,9 @@ The stopping hierarchy -- structural heuristic > content-aware stopping > learne
 
 ## 6.5 Limitations
 
-1. **Single benchmark for end-to-end.** The E2E results (N=100) use only HotpotQA Bridge. Validation on additional benchmarks (BRIGHT, NoLiMa) is needed.
+1. **E2E evaluation on one benchmark.** End-to-end evaluation with LLM answer generation (N=500, p=0.021) uses only HotpotQA Bridge. BRIGHT and open-domain evaluations are retrieval-only. The E2E effect size is small (d=0.103).
 
-2. **No statistical testing on E2E.** Bootstrap CIs and permutation tests are reported only for the retrieval-only evaluation (N=500). The E2E evaluation (N=100) reports point estimates.
+2. **Non-deterministic LLM answers.** Answer generation via gpt-oss-120b is non-deterministic, producing slight absolute U@B variation across runs (Tables 1 and 3). Relative comparisons within each evaluation are valid.
 
 3. **Custom evaluation metric.** Utility@Budget is author-defined. The specific η and μ values determine the ranking — sensitivity analysis across parameter ranges is reported in Appendix C.
 
@@ -608,15 +599,15 @@ The stopping hierarchy -- structural heuristic > content-aware stopping > learne
 **Budget sensitivity.** The hierarchy may invert under very tight budgets (where any retrieval is expensive) or very loose budgets (where cost is negligible). Characterizing the budget regime where each policy dominates is an important practical question.
 # 7 Conclusion
 
-We studied when to stop retrieving across heterogeneous substrates — using semantic and lexical retrieval as the two primary substrates, with entity-graph traversal tested as a third (and found not to contribute) — and discovered a phenomenon that demands explanation: a simple structural heuristic — stop when evidence has converged from two independent sources — significantly outperforms comprehensive retrieval (p=0.021) and resists improvement from three qualitatively different sophisticated approaches.
+We studied when to stop retrieving across heterogeneous substrates and discovered that a simple structural heuristic — stop when evidence has converged from two independent sources — significantly outperforms comprehensive retrieval across three benchmark families: multi-hop QA (HotpotQA, p<0.000001, N=1000), reasoning-intensive retrieval (BRIGHT, p=0.0026, N=200), and diluted open-domain settings (p<0.000001, N=200, 5x candidate expansion). The advantage is invariant to question type and grows in harder settings (Cohen's d increases from 0.38 to 0.49 under distractor dilution).
 
-The cross-encoder approach fails because multi-hop evidence sufficiency is a set function over passage bundles, not decomposable from individual passage scores. The learned classifier fails because workspace statistics are distribution-specific and do not generalize. The LLM decomposition approach fails because parsing noise causes the policy to default to exhaustive retrieval. Each failure illuminates a different aspect of the stopping problem; together, they establish that **structural stopping signals — distribution-invariant properties of the evidence gathering process itself — outperform content-specific signals for retrieval stopping decisions.**
+Five principled content-aware alternatives all fail to improve on this heuristic. The cross-encoder fails because it scores passages individually, not as bundles. The NLI model — which correctly takes full bundles as premise — fails because multi-hop questions resist conversion to well-formed entailment hypotheses. The learned classifier fails because workspace statistics are distribution-specific. The LLM decomposition fails because parsing noise causes the policy to never stop. The embedding router confirms the bottleneck is stopping, not routing.
 
-This finding connects to classical optimal stopping theory: when the value of future observations is hard to estimate, threshold rules on low-noise observable signals dominate value-estimation approaches. The heuristic's source-diversity check is precisely such a signal — observable, cheap, and invariant to the text distribution.
+Together, these results establish that **structural stopping signals — distribution-invariant properties of the evidence gathering process — outperform content-specific signals for retrieval stopping decisions.** This connects to classical optimal stopping theory: threshold rules on low-noise observables dominate value-estimation approaches when the value function is hard to learn.
 
-Four implications follow. First, the adaptive retrieval field should treat stopping as a first-class design target alongside retrieval quality and routing intelligence. Second, practitioners building multi-substrate retrieval systems should default to structural stopping signals rather than investing in content-aware stopping until the set function assessment problem is solved. Third, learned stopping approaches must be evaluated on out-of-distribution data to distinguish genuine generalization from distribution-specific memorization — a standard that, as our learned classifier results demonstrate, many apparently strong results may not survive. Fourth, structured retrieval substrates (entity graphs) should not be assumed to add value: our ablation shows entity-graph traversal contributes nothing on two benchmarks, and the stopping rule captures the same multi-hop benefit more cheaply via source-diversity checking.
+Four implications follow. First, the adaptive retrieval field should treat stopping as a first-class design target. Second, practitioners should default to structural stopping signals rather than investing in content-aware stopping until the bundle assessment problem is solved. Third, learned stopping approaches must be evaluated on out-of-distribution data. Fourth, entity-graph traversal should not be assumed to add value — our ablation shows it contributes nothing on three benchmarks, and the stopping rule captures the same multi-hop benefit more cheaply via source-diversity checking.
 
-The gap between structural stopping (which works) and content-aware stopping (which should work but doesn't yet) defines the key open challenge. Closing it requires models that assess evidence *bundles* rather than individual passages — a set function learning problem that current pre-trained models are not designed for.
+The gap between structural stopping (which works) and content-aware stopping (which should work but doesn't yet) defines the key open challenge. Closing it requires models that assess evidence *bundles* rather than individual passages — a set function learning problem that current pre-trained models are not designed for, and that multi-hop question structure makes particularly difficult.
 # Appendix A: Formal Framework
 
 This appendix presents the constrained MDP formalization that motivates the coverage-driven routing policy described in Section 3.
