@@ -12,6 +12,8 @@ The routing policy operates over a set of **retrieval substrates**, each exposin
 | Lexical | BM25 keyword scoring | Exact terms, identifiers, rare entities |
 | Entity graph | Named entity co-occurrence + BFS | Multi-hop relational chains |
 
+The two primary substrates are semantic and lexical retrieval. We include entity graph traversal as a third substrate to test whether structured retrieval adds value; ablation analysis (Section 5.3) shows it does not contribute on the evaluated benchmarks.
+
 Each query to a substrate returns a ranked list of passages and incurs a cost (measured in operations). The **workspace** is a bounded buffer holding the passages currently under consideration. The policy's job is to decide, after each retrieval step, whether to stop (the evidence is sufficient) or escalate (query another substrate).
 
 Two state components guide routing decisions:

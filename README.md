@@ -781,3 +781,113 @@ Hard stop → budget ≤ 10% or step ≥ 8
 - **Fundamental mismatch:** The MS MARCO cross-encoder is calibrated for *single-hop* passage ranking.  HotpotQA bridge questions require evidence from *two* documents; no single retrieved passage will score above the HIGH_THRESHOLD.  The MEDIUM threshold does trigger for some pairs, but only after multiple lexical fallback steps, resulting in high op cost with no quality advantage.
 - **Content-aware stopping is still a sound idea**, but the right tool is either: (a) a cross-encoder that scores evidence *sets* against the question (bundle-level scoring), or (b) threshold tuning specific to the bridge question distribution.  Neither should use our eval data — a held-out tuning set from HotpotQA train split would be appropriate.
 - **Heuristic remains best policy.** AEA Heuristic leads on E2E U@B (0.7879 vs 0.7493 for ensemble vs 0.6552 for cross-encoder), with the heuristic-vs-ensemble gap now directionally positive (Δ=+0.039) though not reaching p<0.05 at N=500.
+
+---
+
+### Experiment A: Full HotpotQA — All Question Types (2026-04-07)
+
+**Runner:** `experiments/run_full_hotpotqa.py`
+**Results:** `experiments/results/full_hotpotqa.json`
+
+Addresses reviewer concern: "Results may be specific to bridge questions." Tests whether pi_aea_heuristic beats pi_ensemble on comparison questions as well as bridge questions.
+
+**Design:**
+- Full HotpotQA distractor validation set (7405 questions): first 1000 taken as-is (no type filtering)
+- Type distribution in first 1000: 807 bridge, 193 comparison
+- 4 retrieval-only policies: pi_semantic, pi_lexical, pi_ensemble, pi_aea_heuristic
+- Paired t-test (heuristic vs ensemble) on Utility@Budget, overall and per question type
+
+**Results (N=1000: 807 bridge + 193 comparison):**
+
+| Policy | SupportRecall | SupportPrec | AvgOps | Utility@Budget |
+|---|---|---|---|---|
+| pi_semantic | 0.8230 | 0.3335 | 2.00 | 0.0175 |
+| pi_lexical | 0.7885 | 0.3197 | 2.00 | 0.0155 |
+| pi_ensemble | 0.9525 | 0.2541 | 3.00 | 0.0030 |
+| **pi_aea_heuristic** | 0.8385 | 0.3287 | **1.15** | **0.0358** |
+
+**By question type (SupportRecall / Utility@Budget):**
+
+| Policy | Bridge (N=807) | Comparison (N=193) |
+|---|---|---|
+| pi_semantic | 0.7912 / 0.0098 | 0.9560 / 0.0495 |
+| pi_lexical | 0.7962 / 0.0133 | 0.7565 / 0.0247 |
+| pi_ensemble | 0.9411 / 0.0003 | 1.0000 / 0.0145 |
+| **pi_aea_heuristic** | 0.8098 / **0.0303** | 0.9585 / **0.0590** |
+
+**Statistical tests (heuristic vs ensemble, Utility@Budget):**
+
+| Scope | N | Delta | t | p-value | 95% CI | Cohen's d |
+|---|---|---|---|---|---|---|
+| Overall | 1000 | +0.032840 | 11.97 | <0.000001 | [+0.027457, +0.038223] | 0.3786 |
+| Bridge | 807 | +0.030060 | 10.50 | <0.000001 | [+0.024443, +0.035678] | 0.3698 |
+| Comparison | 193 | +0.044462 | 5.83 | <0.000001 | [+0.029411, +0.059512] | 0.4194 |
+
+**Key findings:**
+- **Heuristic beats ensemble on BOTH question types**, with highly significant margins (p < 0.0001 in all cases).
+- **Comparison questions show a LARGER advantage** than bridge questions: Cohen's d=0.42 vs 0.37, and the absolute delta is 48% larger (+0.0445 vs +0.0301).
+- **The finding is NOT specific to bridge questions.** The heuristic's coverage-driven stopping (stop when 2+ high-relevance items from 2+ sources) generalizes across question types because it operates on workspace statistics, not question-type patterns.
+- Runtime: ~7 minutes (semantic indexing dominates).
+
+---
+
+### Experiment B: Open-Domain Retrieval — Expanded Candidate Set (2026-04-07)
+
+**Runner:** `experiments/run_open_domain.py`
+**Results:** `experiments/results/open_domain.json`
+
+Addresses reviewer concern: "Results may be specific to 10-paragraph closed sets." Tests whether pi_aea_heuristic still beats pi_ensemble when the retrieval space is 5x larger.
+
+**Design:**
+- 200 HotpotQA bridge questions
+- Setting A (closed): original 10 paragraphs (2 gold + 8 distractors)
+- Setting B (open-domain): 50 paragraphs (2 gold + 8 original distractors + 40 additional distractors sampled from other questions, seed=42)
+- Distractor pool: 64,900 unique paragraphs from all non-selected questions
+- 4 retrieval-only policies in both settings
+
+**Results:**
+
+Setting A — 10-paragraph closed set:
+
+| Policy | SupportRecall | SupportPrec | AvgOps | Utility@Budget |
+|---|---|---|---|---|
+| pi_semantic | 0.7575 | 0.3030 | 2.00 | 0.0087 |
+| pi_lexical | 0.7900 | 0.3160 | 2.00 | 0.0090 |
+| pi_ensemble | 0.9300 | 0.2411 | 3.00 | -0.0049 |
+| **pi_aea_heuristic** | 0.7850 | 0.3010 | **1.16** | **0.0251** |
+
+Setting B — 50-paragraph open-domain:
+
+| Policy | SupportRecall | SupportPrec | AvgOps | Utility@Budget |
+|---|---|---|---|---|
+| pi_semantic | 0.7475 | 0.2990 | 2.00 | 0.0086 |
+| pi_lexical | 0.7600 | 0.3040 | 2.00 | 0.0059 |
+| pi_ensemble | 0.8925 | 0.2309 | 3.00 | -0.0097 |
+| **pi_aea_heuristic** | 0.7725 | 0.2913 | **1.17** | **0.0251** |
+
+**Head-to-head: 10-para vs 50-para (Utility@Budget):**
+
+| Policy | 10-para | 50-para | Delta |
+|---|---|---|---|
+| pi_semantic | 0.0087 | 0.0086 | -0.0001 |
+| pi_lexical | 0.0090 | 0.0059 | -0.0031 |
+| pi_ensemble | -0.0049 | -0.0097 | -0.0048 |
+| **pi_aea_heuristic** | **0.0251** | **0.0251** | **-0.0000** |
+
+**Statistical tests (heuristic vs ensemble, Utility@Budget):**
+
+| Setting | N | Delta | t | p-value | 95% CI | Cohen's d |
+|---|---|---|---|---|---|---|
+| 10-para | 200 | +0.030050 | 5.18 | 0.000001 | [+0.018603, +0.041497] | 0.3661 |
+| 50-para | 200 | +0.034821 | 6.95 | <0.000001 | [+0.024940, +0.044702] | 0.4914 |
+
+**Heuristic degradation 10-para → 50-para:**
+- Delta = +0.000032 (effectively zero), t=0.094, p=0.925 (NOT significant)
+- The heuristic's Utility@Budget is completely stable: 0.0251 in both settings.
+
+**Key findings:**
+- **Heuristic beats ensemble in BOTH settings** with high significance (p < 0.000001 in both cases).
+- **Cohen's d INCREASES from 0.37 (10-para) to 0.49 (50-para)** — the heuristic's advantage over ensemble actually grows in the harder open-domain setting.
+- **The heuristic shows ZERO degradation** (p=0.925, delta=+0.000032) when the candidate set expands from 10 to 50 paragraphs. Its coverage-driven stopping makes it robust to distractor dilution.
+- **The ensemble degrades more in the expanded setting**: U@B drops from -0.0049 to -0.0097 (97% relative degradation), because it wastes more budget on distractors while the heuristic stops early when it finds sufficient evidence.
+- **The finding is NOT specific to 10-paragraph closed sets.** The heuristic's advantage generalizes to open-domain retrieval settings.

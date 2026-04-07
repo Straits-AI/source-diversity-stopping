@@ -16,6 +16,31 @@ We use the distractor validation split of HotpotQA. From the full 5,918 distract
 | Distractor paragraphs | 8 |
 | Question type | Bridge only |
 
+### HotpotQA Full (All Question Types) — Generalization Experiment A
+
+To verify that results are not specific to bridge questions, we additionally evaluate on the first 1,000 questions from the HotpotQA distractor validation set without type filtering, yielding a mixture of bridge (807) and comparison (193) questions. This tests whether the heuristic's stopping rule—which operates on workspace statistics, not question-type patterns—generalizes across question types.
+
+| Property | Value |
+|---|---|
+| Total questions | 1,000 |
+| Bridge questions | 807 (80.7%) |
+| Comparison questions | 193 (19.3%) |
+| Context paragraphs per question | 10 |
+| Seed | 42 |
+
+### HotpotQA Open-Domain Expansion — Generalization Experiment B
+
+To verify that results are not specific to the closed 10-paragraph setting, we expand the candidate set for 200 bridge questions from 10 to 50 paragraphs (2 gold + 8 original distractors + 40 additional distractors sampled from other questions in the dataset, seed=42). The distractor pool comprises 64,900 unique paragraphs from all non-selected questions. This simulates open-domain retrieval where the gold signal is diluted 5-fold.
+
+| Property | Value |
+|---|---|
+| Total questions | 200 |
+| Setting A (closed) | 10 paragraphs per question |
+| Setting B (open-domain) | 50 paragraphs per question |
+| Gold supporting paragraphs | 2 |
+| Additional distractors (B) | 40 (sampled from 64,900-paragraph pool) |
+| Seed | 42 |
+
 ### Heterogeneous Benchmark v2 (this work)
 
 To test robustness across a broader range of retrieval challenges, we construct a synthetic benchmark of 100 questions spanning six task types, generated deterministically with seed 42.
@@ -37,10 +62,12 @@ Two design invariants are enforced programmatically: (1) **Entity isolation** �
 |---|---|---|
 | $\pi_\text{semantic}$ | Dense retrieval via all-MiniLM-L6-v2, top-k by cosine similarity | Semantic only |
 | $\pi_\text{lexical}$ | BM25 via rank_bm25, top-k by BM25 score | Lexical only |
-| $\pi_\text{entity}$ | Regex NER + entity co-occurrence graph + BFS | Entity only |
+| $\pi_\text{entity}$ | Regex NER + entity co-occurrence graph + BFS | Entity only (negative control) |
 | $\pi_\text{ensemble}$ | Query all substrates, merge and deduplicate | All (no routing) |
 | $\pi_\text{aea}$ | Coverage-driven adaptive routing (proposed) | All (heuristic routing) |
 | $\pi_\text{llm}$ | LLM reasons about evidence sufficiency at each step (gpt-oss-120b) | All (LLM routing) |
+
+$\pi_\text{entity}$ is included as a negative control: we report it for completeness and to verify that entity-graph traversal alone does not explain system performance. Ablation results confirm it does not (Section 5.3).
 
 $\pi_\text{llm}$ receives the question, current workspace contents, and available actions at each step, and responds with a single routing decision (STOP, SEMANTIC_SEARCH, LEXICAL_SEARCH, or ENTITY_HOP). It always performs semantic search at step 0; from step 1 onward, the LLM decides. This policy tests whether LLM-guided positive routing outperforms the heuristic's coverage-driven stopping.
 

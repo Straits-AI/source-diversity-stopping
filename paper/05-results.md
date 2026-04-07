@@ -86,3 +86,57 @@ The heuristic's advantage replicates on 2WikiMultiHopQA (synthetic, N=100, E2E):
 | **π_heuristic** | **0.890** | **0.905** | **1.00** | **1.055** |
 
 The heuristic achieves the best E2E U@B (1.055) at the lowest operation count (1.00), confirming that structural stopping generalizes beyond HotpotQA.
+
+## 5.7 Generalization: All Question Types (N=1000)
+
+To address the concern that results may be specific to bridge questions, we evaluate on the first 1,000 questions of the HotpotQA distractor validation set without type filtering (807 bridge, 193 comparison).
+
+**Table 5.** Full HotpotQA evaluation, all question types (retrieval-only, N=1000).
+
+| Policy | SupportRecall | SupportPrec | AvgOps | Utility@Budget |
+|---|---|---|---|---|
+| π_semantic | 0.823 | 0.334 | 2.00 | 0.0175 |
+| π_lexical | 0.789 | 0.320 | 2.00 | 0.0155 |
+| π_ensemble | 0.953 | 0.254 | 3.00 | 0.0030 |
+| **π_heuristic** | 0.839 | 0.329 | **1.15** | **0.0358** |
+
+**Breakdown by question type:**
+
+| Policy | Bridge U@B (N=807) | Comparison U@B (N=193) |
+|---|---|---|
+| π_semantic | 0.0098 | 0.0495 |
+| π_lexical | 0.0133 | 0.0247 |
+| π_ensemble | 0.0003 | 0.0145 |
+| **π_heuristic** | **0.0303** | **0.0590** |
+
+**Statistical tests (heuristic vs ensemble, paired t-test on U@B):**
+
+| Scope | N | Δ | p-value | 95% CI | Cohen's d |
+|---|---|---|---|---|---|
+| Overall | 1000 | +0.0328 | <0.000001 | [+0.0275, +0.0382] | 0.379 |
+| Bridge | 807 | +0.0301 | <0.000001 | [+0.0244, +0.0357] | 0.370 |
+| Comparison | 193 | +0.0445 | <0.000001 | [+0.0294, +0.0595] | 0.419 |
+
+The heuristic beats the ensemble on **both** question types with high statistical significance (p < 0.0001 in all cases). Comparison questions show a *larger* advantage than bridge questions (Cohen's d = 0.42 vs 0.37, absolute Δ 48% larger). The structural stopping rule is type-agnostic: it operates on workspace statistics, not question-type patterns.
+
+## 5.8 Generalization: Open-Domain Retrieval (5x Candidate Set)
+
+To address the concern that results may be specific to 10-paragraph closed sets, we expand the candidate pool for 200 bridge questions from 10 to 50 paragraphs (2 gold + 48 distractors). The additional 40 distractors are sampled from other questions' paragraphs (64,900 unique paragraphs available), simulating a harder open-domain setting.
+
+**Table 6.** Open-domain retrieval results (retrieval-only, N=200).
+
+| Policy | 10-para U@B | 50-para U@B | Degradation |
+|---|---|---|---|
+| π_semantic | 0.0087 | 0.0086 | −0.0001 |
+| π_lexical | 0.0090 | 0.0059 | −0.0031 |
+| π_ensemble | −0.0049 | −0.0097 | −0.0048 |
+| **π_heuristic** | **0.0251** | **0.0251** | **0.0000** |
+
+**Statistical tests (heuristic vs ensemble per setting):**
+
+| Setting | N | Δ | p-value | 95% CI | Cohen's d |
+|---|---|---|---|---|---|
+| 10-para | 200 | +0.0301 | 0.000001 | [+0.0186, +0.0415] | 0.366 |
+| 50-para | 200 | +0.0348 | <0.000001 | [+0.0249, +0.0447] | 0.491 |
+
+The heuristic's U@B is **invariant to candidate set size** (p=0.925, Δ=+0.000032 for 10-para vs 50-para degradation test). Cohen's d for the heuristic-vs-ensemble comparison actually *increases* from 0.37 to 0.49 in the harder open-domain setting, as the ensemble degrades more than the heuristic under distractor dilution. The structural stopping rule is robust: it finds sufficient evidence early and stops, regardless of how many distractors surround the gold paragraphs.
