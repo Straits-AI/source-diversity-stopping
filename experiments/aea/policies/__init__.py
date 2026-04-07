@@ -13,6 +13,7 @@ DecompositionStoppingPolicy — π_decomposition: LLM decomposes question once; 
                                when requirements are covered by workspace content
 EmbeddingRouterPolicy       — π_embedding_router: embedding-based question-type routing
 CrossEncoderStoppingPolicy  — π_cross_encoder_stop: content-aware stopping via MS MARCO cross-encoder
+NLIStoppingPolicy           — π_nli_stopping: NLI bundle sufficiency check (principled set-function baseline)
 Policy                      — abstract base class for custom policies
 """
 
@@ -23,6 +24,7 @@ from .embedding_router import EmbeddingRouterPolicy
 from .ensemble import EnsemblePolicy
 from .heuristic import AEAHeuristicPolicy
 from .llm_routed import LLMRoutedPolicy
+from .nli_stopping import NLIStoppingPolicy
 from .single_substrate import EntityOnlyPolicy, LexicalOnlyPolicy, SemanticOnlyPolicy
 
 __all__ = [
@@ -36,4 +38,5 @@ __all__ = [
     "DecompositionStoppingPolicy",
     "EmbeddingRouterPolicy",
     "CrossEncoderStoppingPolicy",
+    "NLIStoppingPolicy",
 ]
