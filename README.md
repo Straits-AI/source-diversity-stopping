@@ -505,12 +505,19 @@ Phase 4: Full experiments — in progress.
     decomposition does NOT beat the heuristic E2E; see `experiments/aea/policies/decomposition_stopping.py`
     and `experiments/results/decomposition_eval_results.json`).
 Phase 5: Analysis — complete. Key finding: learned stopping > heuristic stopping > brute force.
-Phase 6: Paper writing — complete (v5 final draft with all revisions).
-  Paper: `paper/full-paper.md` (6889 words), 7 sections + appendix + comparison table.
+Phase 5a: Root cause analysis — complete. Deep analysis of WHY the heuristic resists improvement
+  from cross-encoder stopping, LLM decomposition, learned GBT classifier, and embedding routing.
+  Core thesis: structural signals (source diversity) are distribution-invariant, while content-aware
+  signals fail due to set function decomposition failure (cross-encoder), spurious correlation under
+  distribution shift (GBT), and precision-matchability tradeoff (decomposition).
+  Analysis: `paper/06a-root-cause-analysis.md`, integrated into `paper/06-discussion.md` Section 6.5.
+Phase 6: Paper writing — complete (v6 with root cause analysis).
+  Paper: `paper/full-paper.md`, 7 sections + appendix + comparison table.
   Title: "Adaptive Retrieval Routing: When Knowing What Not To Do Beats Choosing the Right Tool"
   Key results: Learned stopping U@B=0.766 [0.715, 0.819] at N=500 E2E.
   Validated on 2 benchmarks (HotpotQA + 2WikiMultiHopQA).
   Crossover at μ=0.20: stopping dominates for any non-trivial cost penalty.
+  NEW: Section 6.5 root cause analysis — why heuristic resists improvement from 4 sophisticated approaches.
 
 ---
 
