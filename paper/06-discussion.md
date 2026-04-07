@@ -2,13 +2,9 @@
 
 ## 6.1 Smart Stopping Beats Smart Searching
 
-The end-to-end results establish a clear hierarchy: **smart stopping > brute force > smart searching** under budget-aware evaluation. The heuristic AEA policy (E2E U@B 0.760) outperforms comprehensive retrieval (ensemble, 0.731) and LLM-guided routing (0.652), despite having lower F1 and recall than both.
+The end-to-end results (N=500, clean split, Table 1) establish that the heuristic stopping rule achieves the highest E2E U@B (0.759) despite producing lower-quality answers than the ensemble (F1 0.612 vs 0.681, EM 0.448 vs 0.510). The heuristic's advantage is entirely cost-driven: 1.16 operations versus 3.00, a 61% reduction that more than compensates for the quality gap under μ = 0.3.
 
-This hierarchy has a precise explanation. The cost penalty in Utility@Budget creates a threshold: additional retrieval is worthwhile only if the marginal F1 improvement exceeds μ × (marginal cost / max cost). For the ensemble, the third retrieval step (entity graph) adds ~0.13 recall but costs 1.0 normalized operation, yielding marginal utility of ~0.13 × (1+0.5×0.94) × improvement_rate - 0.3 × 0.33 ≈ −0.01 — slightly negative. The ensemble's last step hurts more than it helps.
-
-The LLM router faces the same trap at a finer grain: it correctly identifies questions that need more evidence, but the additional operations it authorizes produce diminishing F1 returns. Its average 2.54 operations deliver only 0.007 more F1 than the heuristic's 1.21 operations, a marginal return of 0.005 F1 per additional operation — well below the break-even threshold.
-
-The practical implication is a design principle for retrieval systems: **default to restraint and require strong evidence of a coverage gap before escalating.** The heuristic's simple coverage check (2+ high-relevance items from 2+ sources → stop) implements this principle at near-zero computational cost.
+This is an honest cost-quality tradeoff, not a universal superiority claim. The sensitivity analysis (Table 4) shows the crossover at μ ≈ 0.3: below this threshold, the ensemble's higher answer quality dominates; above it, the heuristic's cost efficiency dominates. The practical implication is a design principle for retrieval systems: **default to restraint and require strong evidence of a coverage gap before escalating,** but only when retrieval cost is a binding constraint.
 
 ## 6.2 The Positive Routing Gap
 
@@ -38,7 +34,7 @@ We tested four approaches designed to improve on the heuristic's stopping decisi
 | LLM decomposition | gpt-oss-120b decomposes question into sub-requirements | 2.95 | 0.758 | -0.030 |
 | Learned GBT classifier | Gradient boosted tree on workspace statistics | 5.00 | 0.498 | catastrophic |
 | Embedding router | Question embedding predicts best retrieval strategy | 1.28 | tied | +0.001 |
-| **Heuristic** | **2+ items from 2+ sources** | **1.16** | **0.788** | **--** |
+| **Heuristic** | **2+ items from 2+ sources** | **1.16** | **0.759** | **--** |
 
 Every sophisticated approach either degrades performance or merely ties. The cross-encoder is significantly worse (p<0.0001); the decomposition approach wastes approximately 2.5x the operations for lower utility; the learned classifier catastrophically fails to generalize; and the embedding router, while successfully routing questions, confirms that the bottleneck is stopping rather than routing.
 
@@ -56,7 +52,7 @@ Structural signals have three properties that content signals lack:
 
 ### 6.4.3 Why Content-Aware Stopping Fails on Multi-Hop QA
 
-The cross-encoder stopping policy uses a pre-trained MS MARCO model to score (question, passage) pairs. It stops when the top cross-encoder score exceeds a high threshold (7.0) or when two or more passages exceed a medium threshold (3.0). Yet it achieves the worst E2E U@B of any policy tested (0.655), significantly below even the brute-force ensemble (0.749, p=0.0001).
+The cross-encoder stopping policy uses a pre-trained MS MARCO model to score (question, passage) pairs. It stops when the top cross-encoder score exceeds a high threshold (7.0) or when two or more passages exceed a medium threshold (3.0). Yet it achieves the worst E2E U@B of any policy tested (0.655), significantly below even the brute-force ensemble (0.707, p=0.0001).
 
 The root cause is a **set function decomposition failure**. Multi-hop questions require an evidence *bundle* -- a set of passages that jointly contain the answer even though no individual passage does. Consider "What nationality is the director of Jaws?" The evidence consists of two passages: one identifying Steven Spielberg as the director, and another identifying Spielberg as American. Neither passage, scored independently against the full question, receives a high cross-encoder score, because neither individually answers the question.
 

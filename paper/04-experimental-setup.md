@@ -72,7 +72,7 @@ with $\eta = 0.5$, $\mu = 0.3$ (fixed before experiments).
 | Support Precision | $|\text{workspace} \cap \text{gold}| / |\text{workspace}|$ |
 | Average Operations | Mean retrieval operations per question |
 
-**Scope note.** This evaluation is retrieval-focused. No LLM is used for answer generation; EM/F1 are not reported.
+**Two evaluation modes.** We report both retrieval-only metrics (Support Recall, Support Precision) and end-to-end metrics (EM, F1) with LLM answer generation via gpt-oss-120b. The retrieval-only U@B uses SupportRecall as AnswerScore; the end-to-end U@B uses F1 as AnswerScore. Both formulas are explicitly identified in each results table.
 
 ## 4.5 Implementation Details
 

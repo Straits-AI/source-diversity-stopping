@@ -1,47 +1,38 @@
 # 5 Results
 
-## 5.1 Retrieval Quality (N=500, Statistical Validation)
+All results in this section use the clean experimental split (train: questions 500–999, eval: questions 0–499, verified zero overlap). Utility@Budget for end-to-end evaluation is computed as F1 × (1 + 0.5 × SupportRecall) − μ × (Ops / 3.0), with μ = 0.3.
 
-**Table 1.** Retrieval-only results on HotpotQA Bridge (N=500, bootstrap 95% CIs).
+## 5.1 Retrieval Quality (N=500)
 
-| Policy | SupportRecall (mean ± std) | AvgOps | Retrieval U@B [95% CI] |
-|---|---|---|---|
-| π_semantic | 0.797 ± 0.011 | 2.00 | 0.0129 [0.010, 0.017] |
-| π_lexical | 0.772 ± 0.016 | 2.00 | 0.0115 [0.008, 0.015] |
-| π_entity | 0.732 ± 0.021 | 3.00 | −0.034 [−0.036, −0.032] |
-| π_ensemble | 0.929 ± 0.005 | 3.00 | −0.002 [−0.005, 0.002] |
-| π_heuristic | 0.810 ± 0.009 | 1.15 | 0.0322 [0.029, 0.036] |
-| **π_learned** | **0.811** | **1.23** | **0.0332** |
+On retrieval-only evaluation (N=500, 5 seeds, bootstrap CIs), the heuristic stopping policy achieves the highest support recall (0.810) among stopping-based policies at the lowest operation count (1.15). All comparisons between the heuristic and single-substrate baselines are statistically significant (paired permutation tests, p < 0.0001, Cohen's d = 0.807 vs π_semantic). Full retrieval-only results are reported in Appendix D.
 
-All comparisons between stopping-based policies and single-substrate baselines are statistically significant (paired permutation tests, p < 0.0001, Cohen's d = 0.807 vs π_semantic). The learned stopping classifier achieves the best retrieval U@B (0.0332, +17% over heuristic) with slightly higher recall (0.811 vs 0.810) at the cost of 0.08 additional operations (1.23 vs 1.15).
+## 5.2 End-to-End Answer Quality (N=500)
 
-## 5.2 End-to-End Answer Quality (N=500, Bootstrap CIs)
+To validate that retrieval efficiency translates to downstream answer quality, we generate answers from retrieved evidence using gpt-oss-120b (via OpenRouter). The same model and prompt are used for all policies — only the retrieved evidence differs.
 
-**Table 2.** End-to-end results on HotpotQA Bridge (N=500, gpt-oss-120b, bootstrap 95% CIs).
+**Table 1.** End-to-end results on HotpotQA Bridge (N=500, clean split, bootstrap 95% CIs). E2E U@B uses F1 as AnswerScore with μ = 0.3.
 
 | Policy | EM | F1 | SupportRecall | AvgOps | E2E U@B [95% CI] |
 |---|---|---|---|---|---|
-| π_ensemble | 0.496 | 0.671 | 0.943 | 3.00 | 0.692 [0.638, 0.743] |
-| π_heuristic | 0.440 | 0.605 | 0.806 | **1.16** | 0.751 [0.696, 0.803] |
-| **π_learned** | **0.466** | **0.620** | **0.811** | 1.23 | **0.766 [0.715, 0.819]** |
+| π_ensemble | **0.510** | **0.681** | **0.943** | 3.00 | 0.707 [0.655, 0.759] |
+| **π_heuristic** | 0.448 | 0.612 | 0.806 | **1.16** | **0.759 [0.706, 0.812]** |
 
-**Statistical significance (paired permutation tests, 10,000 iterations):**
+**Statistical significance (paired t-test):**
+- Heuristic vs Ensemble: Δ = +0.052, p = 0.021, Cohen's d = 0.103, 95% CI on difference: [0.007, 0.096]
 
-| Comparison | Δ E2E U@B | p-value | Cohen's d |
-|---|---|---|---|
-| Learned vs Ensemble | +0.074 | 0.054 | 0.136 |
-| Heuristic vs Ensemble | +0.058 | 0.129 | 0.112 |
-| Learned vs Heuristic | +0.016 | 0.693 | 0.037 |
+The heuristic achieves the highest E2E U@B (0.759) despite lower F1 (0.612 vs 0.681) and lower EM (0.448 vs 0.510). The mechanism is cost efficiency: 1.16 operations versus 3.00, a 61% reduction. Under the Utility@Budget metric, this cost saving more than compensates for the quality gap.
 
-The learned stopping classifier achieves the highest end-to-end Utility@Budget (0.766), outperforming both the heuristic (0.751) and the ensemble (0.692). The learned-vs-ensemble gap (+0.074) approaches significance (p = 0.054). While the confidence intervals overlap, the **consistent ranking** — learned > heuristic > ensemble — holds across all bootstrap resamples, both benchmarks (Section 5.4), and all cost sensitivity levels μ ≥ 0.20 (Section 5.5).
+**Important caveat:** The ensemble produces **better answers** on standard metrics (EM +6.2pp, F1 +6.9pp, Recall +13.7pp). The heuristic's advantage exists only under cost-penalized evaluation. The practical recommendation depends on the deployment context: when retrieval cost matters (μ ≥ 0.3), use the heuristic; when only answer quality matters (μ < 0.3), use the ensemble. The sensitivity analysis in Section 5.5 quantifies this tradeoff.
 
-The ensemble achieves the highest F1 (0.671) and recall (0.943), but its cost (3.00 ops) is three times that of the stopping-based policies. The learned classifier matches the heuristic's cost efficiency (1.23 vs 1.16 ops) while achieving higher EM (+0.026), higher F1 (+0.015), and higher recall (+0.005) — validating that learning the stopping threshold from data produces better calibration than hand-tuning.
+### The Learned Stopping Classifier: A Negative Result
+
+We also evaluate a learned stopping classifier (gradient boosted tree on 9 workspace features, trained on questions 500–999 with zero overlap). On the clean evaluation split, the classifier **fails catastrophically**: it uses 5.00 average operations (never stops) and achieves E2E U@B of 0.498 — worse than both the heuristic and the ensemble. The root cause analysis in Section 6.4.4 explains why: the classifier captures distribution-specific correlations that do not generalize across question splits.
 
 ## 5.3 Ablation Analysis
 
-**Table 3.** Ablation results on HotpotQA Bridge (retrieval-only, N=100).
+**Table 2.** Ablation results on HotpotQA Bridge (retrieval-only, N=100).
 
-| Ablation | U@B | Δ from Full Heuristic |
+| Ablation | Retrieval U@B | Δ from Heuristic |
 |---|---|---|
 | Full heuristic | 0.028 | — |
 | abl_no_early_stop | 0.028 | +0.000 |
@@ -50,40 +41,48 @@ The ensemble achieves the highest F1 (0.671) and recall (0.943), but its cost (3
 | abl_semantic_smart_stop | −0.009 | −0.037 |
 | abl_always_hop | −0.086 | **−0.115** |
 
-**Selective stopping is the dominant mechanism.** abl_always_hop is catastrophic (Δ = −0.115): forcing unconditional escalation wastes budget on operations that degrade utility. The gap between selective stopping and unconditional escalation (0.115 U@B) is the largest single effect in the ablation study.
+**Selective stopping is the dominant mechanism.** abl_always_hop is catastrophic (Δ = −0.115): forcing unconditional escalation wastes budget on operations that degrade utility. This is the largest single effect in the ablation study and directly supports the structural signal thesis.
 
-**Entity hops are net-neutral to negative on lexically-rich data.** abl_no_entity_hop improves U@B by +0.004, indicating that on HotpotQA — where BM25-style keyword matching is effective — entity graph traversal adds cost without proportionate benefit. This does not imply entity hops are universally unhelpful; on the heterogeneous benchmark (Section 5.4), they contribute to multi-hop task types. The practical implication is that substrate value is workload-dependent, reinforcing the case for adaptive routing.
+**Entity hops are net-neutral to negative.** abl_no_entity_hop improves retrieval U@B by +0.004, confirming that entity graph traversal adds cost without proportionate benefit on HotpotQA. The effective system operates over two substrates (semantic + lexical) with a stopping rule.
 
-## 5.4 Second Benchmark: 2WikiMultiHopQA
+## 5.4 Three Failed Improvements
 
-To test generalizability, we evaluate on 2WikiMultiHopQA (100 questions: 50 bridge, 50 comparison).
+To test whether the heuristic can be improved, we implement three principled alternatives. All are evaluated on the same clean split (questions 0–499).
 
-**Table 4.** End-to-end results on 2WikiMultiHopQA (N=100, gpt-oss-120b).
+**Table 3.** Failed improvement attempts vs. the heuristic (E2E evaluation where available, retrieval-only otherwise).
+
+| Approach | Mechanism | AvgOps | E2E U@B | vs Heuristic |
+|---|---|---|---|---|
+| Cross-encoder stopping | MS MARCO scores (q, passage) pairs | 3.09 | 0.655 | −0.104 (p < 0.0001) |
+| Learned GBT classifier | 9 workspace features, trained on 500–999 | 5.00 | 0.498 | −0.261 (catastrophic) |
+| LLM decomposition | gpt-oss-120b decomposes into sub-requirements | 2.95 | 0.758 | −0.001 |
+| Embedding router | Question embedding → strategy classifier | 1.28 | tied (retrieval) | +0.000 |
+| **Heuristic** | **2+ items from 2+ sources** | **1.16** | **0.759** | **baseline** |
+
+Every sophisticated approach either degrades performance or merely ties. The cross-encoder is significantly worse (p < 0.0001); the learned classifier catastrophically fails on out-of-distribution questions; the LLM decomposition wastes 2.95 operations for equivalent utility; and the embedding router, while correctly suppressing entity hops, confirms that the bottleneck is stopping, not routing. Section 6.4 provides a unified root cause analysis of these failures.
+
+## 5.5 Cost-Sensitivity Analysis
+
+**Table 4.** E2E U@B across cost penalty μ (N=500, clean split).
+
+| μ | π_ensemble | π_heuristic | Winner |
+|---|---|---|---|
+| 0.0 | **1.007** | 0.874 | ensemble |
+| 0.1 | **0.907** | 0.836 | ensemble |
+| 0.2 | **0.807** | 0.797 | ensemble |
+| 0.3 | 0.707 | **0.759** | heuristic |
+| 0.4 | 0.607 | **0.720** | heuristic |
+| 0.5 | 0.507 | **0.682** | heuristic |
+
+The crossover occurs at **μ ≈ 0.3**: below this threshold, comprehensive retrieval dominates because answer quality outweighs cost; above it, the heuristic dominates because marginal retrieval yields diminishing returns. This provides actionable guidance: when each retrieval operation costs at least 30% of a quality point (in normalized terms), invest in stopping rather than comprehensive retrieval.
+
+## 5.6 Second Benchmark: 2WikiMultiHopQA
+
+The heuristic's advantage replicates on 2WikiMultiHopQA (synthetic, N=100, E2E):
 
 | Policy | EM | F1 | AvgOps | E2E U@B |
 |---|---|---|---|---|
 | π_semantic | 0.890 | 0.897 | 2.00 | 1.031 |
 | **π_heuristic** | **0.890** | **0.905** | **1.00** | **1.055** |
-| π_learned | 0.850 | 0.856 | 1.58 | 0.989 |
 
-The stopping > searching hierarchy replicates: π_heuristic achieves the best E2E U@B (1.055) at the lowest operation count (1.00). On this benchmark, the heuristic outperforms the learned classifier (1.055 vs 0.989), suggesting the classifier trained on HotpotQA does not perfectly generalize to different question distributions — a natural direction for future work (cross-domain stopping transfer).
-
-## 5.5 Cost-Sensitivity Analysis
-
-**Table 5.** E2E Utility@Budget across cost penalty μ (N=500).
-
-| μ | π_ensemble | π_heuristic | π_learned | Winner |
-|---|---|---|---|---|
-| 0.00 | **0.992** | 0.866 | 0.890 | ensemble |
-| 0.10 | **0.892** | 0.828 | 0.849 | ensemble |
-| 0.20 | 0.792 | 0.789 | **0.807** | learned |
-| 0.25 | 0.742 | 0.770 | **0.787** | learned |
-| 0.30 | 0.692 | 0.751 | **0.766** | learned |
-| 0.40 | 0.592 | 0.712 | **0.725** | learned |
-| 0.50 | 0.492 | 0.674 | **0.684** | learned |
-
-The crossover occurs at **μ ≈ 0.20**: below this threshold, comprehensive retrieval (ensemble) dominates because answer quality improvements outweigh cost; above it, stopping-based policies dominate because marginal retrieval yields diminishing returns. For any cost penalty μ ≥ 0.20, the learned stopping classifier achieves the best Utility@Budget. This provides actionable guidance: **when retrieval cost matters even moderately, invest in calibrated stopping rather than comprehensive retrieval.**
-
-## 5.6 Within-Task Substrate Switching
-
-Oracle analysis of HotpotQA Bridge reveals 44% of questions require within-task substrate switching for optimal performance. Step 1 favors semantic (92%); Step 2 favors entity hop (88%). The learned classifier captures this pattern implicitly through the max_relevance_improvement feature — questions where the first semantic search produces high-quality, diverse evidence stop immediately, while questions where initial evidence is insufficient trigger escalation.
+The heuristic achieves the best E2E U@B (1.055) at the lowest operation count (1.00), confirming that structural stopping generalizes beyond HotpotQA.
