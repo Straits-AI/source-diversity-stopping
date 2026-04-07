@@ -12,7 +12,7 @@ We tested four approaches designed to improve on the heuristic's stopping decisi
 | LLM decomposition | gpt-oss-120b decomposes question into sub-requirements | 2.95 | 0.758 | -0.030 |
 | Learned GBT classifier | Gradient boosted tree on workspace statistics | 5.00 | 0.498 | catastrophic |
 | Embedding router | Question embedding predicts best retrieval strategy | 1.28 | tied | +0.001 |
-| **Heuristic** | **2+ items from 2+ sources** | **1.16** | **0.788** | **--** |
+| **Heuristic** | **2+ items from 2+ sources** | **1.16** | **0.759** | **--** |
 
 Every sophisticated approach either degrades performance or merely ties. The cross-encoder is significantly worse (p<0.0001); the decomposition approach wastes approximately 2.5x the operations for lower utility; the learned classifier catastrophically fails to generalize; and the embedding router, while successfully routing questions, confirms that the bottleneck is stopping rather than routing.
 
@@ -22,7 +22,7 @@ The heuristic's stopping criterion -- "2+ high-relevance items from 2+ different
 
 Structural signals have three properties that content signals lack:
 
-**Distribution invariance.** The predicate "items from 2+ sources" is a counting function over source identifiers. It does not depend on passage vocabulary, entity density, syntactic structure, or any other property of the text distribution. When the question distribution shifts -- from HotpotQA to 2WikiMultiHopQA, from bridge questions to comparison questions, from short-answer factoid queries to complex reasoning chains -- the structural predicate remains well-defined and its threshold remains calibrated. This explains why the heuristic achieves the best E2E U@B on 2WikiMultiHopQA (1.055 vs 0.989 for the learned classifier), even though it was never tuned on that benchmark.
+**Distribution invariance.** The predicate "items from 2+ sources" is a counting function over source identifiers. It does not depend on passage vocabulary, entity density, syntactic structure, or any other property of the text distribution. When the question distribution shifts -- from HotpotQA to 2WikiMultiHopQA, from bridge questions to comparison questions, from short-answer factoid queries to complex reasoning chains -- the structural predicate remains well-defined and its threshold remains calibrated. This explains why the heuristic achieves the best E2E U@B on 2WikiMultiHopQA (1.055 vs 1.031 for semantic-only), even though it was never tuned on that benchmark.
 
 **Compositionality for free.** Multi-hop questions have a compositional answer structure: the answer depends on a conjunction of facts, each potentially residing in a different passage. The heuristic's multi-source requirement is a natural proxy for compositionality -- if evidence has arrived from two independent retrieval pathways (e.g., a semantic search that found entity A and a subsequent search that found entity B), the workspace likely contains both halves of the bridge. This proxy is imperfect (two passages from different sources may both concern entity A), but it is correct frequently enough to dominate alternatives that attempt to verify compositionality explicitly but fail due to noise.
 
