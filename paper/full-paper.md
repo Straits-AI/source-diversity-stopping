@@ -2,7 +2,7 @@
 
 ## Abstract
 
-When should a retrieval system stop searching? We study this question in the context of multi-substrate retrieval routing, where a policy operates over semantic, lexical, and entity-graph retrieval and must decide after each step whether to stop or escalate. We find that a simple structural heuristic — stop when the workspace contains evidence from two or more independent sources — significantly outperforms comprehensive retrieval on end-to-end Utility@Budget (paired t-test, p=0.021, N=500, HotpotQA Bridge) at one-third the operation cost.
+When should a retrieval system stop searching? We study this question in the context of multi-substrate retrieval routing, where a policy operates over semantic and lexical retrieval (with entity-graph traversal tested as a third substrate) and must decide after each step whether to stop or escalate. We find that a simple structural heuristic — stop when the workspace contains evidence from two or more independent sources — significantly outperforms comprehensive retrieval on end-to-end Utility@Budget (paired t-test, p=0.021, N=500, HotpotQA Bridge) at one-third the operation cost.
 
 We then attempt three principled improvements: content-aware stopping via a pre-trained cross-encoder, data-driven stopping via a learned classifier on trajectory features, and requirement-driven stopping via LLM-based question decomposition. All three fail. The cross-encoder cannot assess multi-document sufficiency because evidence bundle quality is a set function not decomposable from individual passage scores. The learned classifier overfits to distribution-specific workspace statistics and fails catastrophically on out-of-distribution questions. The LLM decomposition introduces parsing noise that causes the policy to never stop.
 
@@ -11,7 +11,7 @@ Root cause analysis reveals that the heuristic succeeds because it operates on a
 
 When should a retrieval system stop searching? The dominant paradigm in retrieval-augmented generation commits to a fixed retrieval budget — typically one or two calls to a single index — regardless of whether the retrieved evidence is sufficient or the additional operations are wasteful. Recent adaptive retrieval systems address the sufficiency side: Self-RAG [Asai et al., 2024] learns when to skip retrieval, FLARE [Jiang et al., 2023] triggers retrieval on low-confidence tokens, and Adaptive-RAG [Jeong et al., 2024] routes queries by complexity. Yet these systems operate within a single retrieval modality. The question of when to stop searching across multiple qualitatively different substrates — semantic indexes, keyword indexes, entity graphs — remains underexplored.
 
-In this paper, we study **coverage-driven retrieval stopping** across heterogeneous substrates. We begin with a simple structural heuristic: stop when the workspace contains evidence from two or more independent retrieval sources. On HotpotQA Bridge (N=500, end-to-end with LLM answer generation), this heuristic significantly outperforms comprehensive retrieval (paired t-test, p=0.021) at one-third the operation cost.
+In this paper, we study **coverage-driven retrieval stopping** across heterogeneous substrates, using semantic and lexical retrieval as the two primary substrates and entity-graph traversal as a third substrate to test whether structured retrieval adds value. We begin with a simple structural heuristic: stop when the workspace contains evidence from two or more independent retrieval sources. On HotpotQA Bridge (N=500, end-to-end with LLM answer generation), this heuristic significantly outperforms comprehensive retrieval (paired t-test, p=0.021) at one-third the operation cost.
 
 We then ask: **can we do better?** We implement three principled improvements — a pre-trained cross-encoder for content-aware stopping, a learned classifier on trajectory features, and LLM-based question decomposition for requirement-driven stopping — and find that **all three fail** to improve on the heuristic. Each fails for a different proximate reason, but root cause analysis reveals a common underlying explanation: the heuristic operates on a **structural signal** (source diversity) that is distribution-invariant, compositionally informative, and computationally free, while all three sophisticated alternatives introduce content-specific or distribution-specific noise that degrades stopping quality.
 
@@ -27,7 +27,7 @@ This failure pattern is itself the paper's central contribution. It reveals that
 
 Our contributions are:
 
-1. **A statistically validated stopping result**: a simple coverage heuristic significantly outperforms comprehensive retrieval on end-to-end evaluation (p=0.021, N=500), with the hierarchy replicating on 2WikiMultiHopQA (Section 5).
+1. **A statistically validated stopping result**: a simple coverage heuristic over two primary substrates (semantic and lexical) significantly outperforms comprehensive retrieval on end-to-end evaluation (p=0.021, N=500), with the hierarchy replicating on 2WikiMultiHopQA (Section 5). We also show that entity-graph traversal, tested as a third substrate, does not contribute on either benchmark (ablation, Section 5.3).
 
 2. **Three controlled failure analyses** showing why content-aware, learned, and decomposition-based stopping improvements fail — each illuminating a different aspect of the stopping problem (Section 5, Section 6.4).
 
@@ -102,6 +102,8 @@ The routing policy operates over a set of **retrieval substrates**, each exposin
 | Semantic | Dense embeddings + cosine similarity | Paraphrase, distributional similarity |
 | Lexical | BM25 keyword scoring | Exact terms, identifiers, rare entities |
 | Entity graph | Named entity co-occurrence + BFS | Multi-hop relational chains |
+
+The two primary substrates are semantic and lexical retrieval. We include entity graph traversal as a third substrate to test whether structured retrieval adds value; ablation analysis (Section 5.3) shows it does not contribute on the evaluated benchmarks.
 
 Each query to a substrate returns a ranked list of passages and incurs a cost (measured in operations). The **workspace** is a bounded buffer holding the passages currently under consideration. The policy's job is to decide, after each retrieval step, whether to stop (the evidence is sufficient) or escalate (query another substrate).
 
@@ -181,6 +183,31 @@ We use the distractor validation split of HotpotQA. From the full 5,918 distract
 | Distractor paragraphs | 8 |
 | Question type | Bridge only |
 
+### HotpotQA Full (All Question Types) — Generalization Experiment A
+
+To verify that results are not specific to bridge questions, we additionally evaluate on the first 1,000 questions from the HotpotQA distractor validation set without type filtering, yielding a mixture of bridge (807) and comparison (193) questions. This tests whether the heuristic's stopping rule—which operates on workspace statistics, not question-type patterns—generalizes across question types.
+
+| Property | Value |
+|---|---|
+| Total questions | 1,000 |
+| Bridge questions | 807 (80.7%) |
+| Comparison questions | 193 (19.3%) |
+| Context paragraphs per question | 10 |
+| Seed | 42 |
+
+### HotpotQA Open-Domain Expansion — Generalization Experiment B
+
+To verify that results are not specific to the closed 10-paragraph setting, we expand the candidate set for 200 bridge questions from 10 to 50 paragraphs (2 gold + 8 original distractors + 40 additional distractors sampled from other questions in the dataset, seed=42). The distractor pool comprises 64,900 unique paragraphs from all non-selected questions. This simulates open-domain retrieval where the gold signal is diluted 5-fold.
+
+| Property | Value |
+|---|---|
+| Total questions | 200 |
+| Setting A (closed) | 10 paragraphs per question |
+| Setting B (open-domain) | 50 paragraphs per question |
+| Gold supporting paragraphs | 2 |
+| Additional distractors (B) | 40 (sampled from 64,900-paragraph pool) |
+| Seed | 42 |
+
 ### Heterogeneous Benchmark v2 (this work)
 
 To test robustness across a broader range of retrieval challenges, we construct a synthetic benchmark of 100 questions spanning six task types, generated deterministically with seed 42.
@@ -202,10 +229,12 @@ Two design invariants are enforced programmatically: (1) **Entity isolation** �
 |---|---|---|
 | $\pi_\text{semantic}$ | Dense retrieval via all-MiniLM-L6-v2, top-k by cosine similarity | Semantic only |
 | $\pi_\text{lexical}$ | BM25 via rank_bm25, top-k by BM25 score | Lexical only |
-| $\pi_\text{entity}$ | Regex NER + entity co-occurrence graph + BFS | Entity only |
+| $\pi_\text{entity}$ | Regex NER + entity co-occurrence graph + BFS | Entity only (negative control) |
 | $\pi_\text{ensemble}$ | Query all substrates, merge and deduplicate | All (no routing) |
 | $\pi_\text{aea}$ | Coverage-driven adaptive routing (proposed) | All (heuristic routing) |
 | $\pi_\text{llm}$ | LLM reasons about evidence sufficiency at each step (gpt-oss-120b) | All (LLM routing) |
+
+$\pi_\text{entity}$ is included as a negative control: we report it for completeness and to verify that entity-graph traversal alone does not explain system performance. Ablation results confirm it does not (Section 5.3).
 
 $\pi_\text{llm}$ receives the question, current workspace contents, and available actions at each step, and responds with a single routing decision (STOP, SEMANTIC_SEARCH, LEXICAL_SEARCH, or ENTITY_HOP). It always performs semantic search at step 0; from step 1 onward, the LLM decides. This policy tests whether LLM-guided positive routing outperforms the heuristic's coverage-driven stopping.
 
@@ -349,6 +378,60 @@ The heuristic's advantage replicates on 2WikiMultiHopQA (synthetic, N=100, E2E):
 | **π_heuristic** | **0.890** | **0.905** | **1.00** | **1.055** |
 
 The heuristic achieves the best E2E U@B (1.055) at the lowest operation count (1.00), confirming that structural stopping generalizes beyond HotpotQA.
+
+## 5.7 Generalization: All Question Types (N=1000)
+
+To address the concern that results may be specific to bridge questions, we evaluate on the first 1,000 questions of the HotpotQA distractor validation set without type filtering (807 bridge, 193 comparison).
+
+**Table 5.** Full HotpotQA evaluation, all question types (retrieval-only, N=1000).
+
+| Policy | SupportRecall | SupportPrec | AvgOps | Utility@Budget |
+|---|---|---|---|---|
+| π_semantic | 0.823 | 0.334 | 2.00 | 0.0175 |
+| π_lexical | 0.789 | 0.320 | 2.00 | 0.0155 |
+| π_ensemble | 0.953 | 0.254 | 3.00 | 0.0030 |
+| **π_heuristic** | 0.839 | 0.329 | **1.15** | **0.0358** |
+
+**Breakdown by question type:**
+
+| Policy | Bridge U@B (N=807) | Comparison U@B (N=193) |
+|---|---|---|
+| π_semantic | 0.0098 | 0.0495 |
+| π_lexical | 0.0133 | 0.0247 |
+| π_ensemble | 0.0003 | 0.0145 |
+| **π_heuristic** | **0.0303** | **0.0590** |
+
+**Statistical tests (heuristic vs ensemble, paired t-test on U@B):**
+
+| Scope | N | Δ | p-value | 95% CI | Cohen's d |
+|---|---|---|---|---|---|
+| Overall | 1000 | +0.0328 | <0.000001 | [+0.0275, +0.0382] | 0.379 |
+| Bridge | 807 | +0.0301 | <0.000001 | [+0.0244, +0.0357] | 0.370 |
+| Comparison | 193 | +0.0445 | <0.000001 | [+0.0294, +0.0595] | 0.419 |
+
+The heuristic beats the ensemble on **both** question types with high statistical significance (p < 0.0001 in all cases). Comparison questions show a *larger* advantage than bridge questions (Cohen's d = 0.42 vs 0.37, absolute Δ 48% larger). The structural stopping rule is type-agnostic: it operates on workspace statistics, not question-type patterns.
+
+## 5.8 Generalization: Open-Domain Retrieval (5x Candidate Set)
+
+To address the concern that results may be specific to 10-paragraph closed sets, we expand the candidate pool for 200 bridge questions from 10 to 50 paragraphs (2 gold + 48 distractors). The additional 40 distractors are sampled from other questions' paragraphs (64,900 unique paragraphs available), simulating a harder open-domain setting.
+
+**Table 6.** Open-domain retrieval results (retrieval-only, N=200).
+
+| Policy | 10-para U@B | 50-para U@B | Degradation |
+|---|---|---|---|
+| π_semantic | 0.0087 | 0.0086 | −0.0001 |
+| π_lexical | 0.0090 | 0.0059 | −0.0031 |
+| π_ensemble | −0.0049 | −0.0097 | −0.0048 |
+| **π_heuristic** | **0.0251** | **0.0251** | **0.0000** |
+
+**Statistical tests (heuristic vs ensemble per setting):**
+
+| Setting | N | Δ | p-value | 95% CI | Cohen's d |
+|---|---|---|---|---|---|
+| 10-para | 200 | +0.0301 | 0.000001 | [+0.0186, +0.0415] | 0.366 |
+| 50-para | 200 | +0.0348 | <0.000001 | [+0.0249, +0.0447] | 0.491 |
+
+The heuristic's U@B is **invariant to candidate set size** (p=0.925, Δ=+0.000032 for 10-para vs 50-para degradation test). Cohen's d for the heuristic-vs-ensemble comparison actually *increases* from 0.37 to 0.49 in the harder open-domain setting, as the ensemble degrades more than the heuristic under distractor dilution. The structural stopping rule is robust: it finds sufficient evidence early and stops, regardless of how many distractors surround the gold paragraphs.
 # 6 Discussion
 
 ## 6.1 Smart Stopping Beats Smart Searching
@@ -490,13 +573,13 @@ The stopping hierarchy -- structural heuristic > content-aware stopping > learne
 **Budget sensitivity.** The hierarchy may invert under very tight budgets (where any retrieval is expensive) or very loose budgets (where cost is negligible). Characterizing the budget regime where each policy dominates is an important practical question.
 # 7 Conclusion
 
-We studied when to stop retrieving across heterogeneous substrates and discovered a phenomenon that demands explanation: a simple structural heuristic — stop when evidence has converged from two independent sources — significantly outperforms comprehensive retrieval (p=0.021) and resists improvement from three qualitatively different sophisticated approaches.
+We studied when to stop retrieving across heterogeneous substrates — using semantic and lexical retrieval as the two primary substrates, with entity-graph traversal tested as a third (and found not to contribute) — and discovered a phenomenon that demands explanation: a simple structural heuristic — stop when evidence has converged from two independent sources — significantly outperforms comprehensive retrieval (p=0.021) and resists improvement from three qualitatively different sophisticated approaches.
 
 The cross-encoder approach fails because multi-hop evidence sufficiency is a set function over passage bundles, not decomposable from individual passage scores. The learned classifier fails because workspace statistics are distribution-specific and do not generalize. The LLM decomposition approach fails because parsing noise causes the policy to default to exhaustive retrieval. Each failure illuminates a different aspect of the stopping problem; together, they establish that **structural stopping signals — distribution-invariant properties of the evidence gathering process itself — outperform content-specific signals for retrieval stopping decisions.**
 
 This finding connects to classical optimal stopping theory: when the value of future observations is hard to estimate, threshold rules on low-noise observable signals dominate value-estimation approaches. The heuristic's source-diversity check is precisely such a signal — observable, cheap, and invariant to the text distribution.
 
-Three implications follow. First, the adaptive retrieval field should treat stopping as a first-class design target alongside retrieval quality and routing intelligence. Second, practitioners building multi-substrate retrieval systems should default to structural stopping signals rather than investing in content-aware stopping until the set function assessment problem is solved. Third, learned stopping approaches must be evaluated on out-of-distribution data to distinguish genuine generalization from distribution-specific memorization — a standard that, as our learned classifier results demonstrate, many apparently strong results may not survive.
+Four implications follow. First, the adaptive retrieval field should treat stopping as a first-class design target alongside retrieval quality and routing intelligence. Second, practitioners building multi-substrate retrieval systems should default to structural stopping signals rather than investing in content-aware stopping until the set function assessment problem is solved. Third, learned stopping approaches must be evaluated on out-of-distribution data to distinguish genuine generalization from distribution-specific memorization — a standard that, as our learned classifier results demonstrate, many apparently strong results may not survive. Fourth, structured retrieval substrates (entity graphs) should not be assumed to add value: our ablation shows entity-graph traversal contributes nothing on two benchmarks, and the stopping rule captures the same multi-hop benefit more cheaply via source-diversity checking.
 
 The gap between structural stopping (which works) and content-aware stopping (which should work but doesn't yet) defines the key open challenge. Closing it requires models that assess evidence *bundles* rather than individual passages — a set function learning problem that current pre-trained models are not designed for.
 # Appendix A: Formal Framework
