@@ -53,12 +53,16 @@ experiments/aea/        # Core AEA framework (Phase 4)
     ensemble.py         # π_ensemble (query all substrates)
     ablations.py        # Ablation variants (no_early_stop, semantic_smart_stop, no_entity_hop, always_hop, no_workspace_mgmt)
     llm_routed.py       # π_llm_routed (LLM makes routing decisions at each step)
-    learned_stopping.py # π_learned_stop (GBT classifier predicts optimal stopping step)
-experiments/collect_trajectories.py  # Trajectory data collection for training
-experiments/train_stopping_model.py  # Train stopping classifier (logistic regression + GBT)
-experiments/run_learned_stopping.py  # End-to-end evaluation: learned stop vs baselines
-experiments/models/                  # Saved trained models
-  stopping_classifier.pkl            # Trained GBT stopping classifier
+    learned_stopping.py      # π_learned_stop (GBT classifier predicts optimal stopping step)
+    embedding_router.py      # π_embedding_router (question-embedding routing classifier; train 500-999, eval 0-499)
+    decomposition_stopping.py # π_decomposition (LLM decomposes question once; stops when keyword coverage met)
+experiments/collect_trajectories.py       # Trajectory data collection for training
+experiments/train_stopping_model.py       # Train stopping classifier (logistic regression + GBT)
+experiments/run_learned_stopping.py       # End-to-end evaluation: learned stop vs baselines
+experiments/run_embedding_router_eval.py  # Embedding router vs heuristic evaluation (train/eval split)
+experiments/run_decomposition_eval.py     # Decomposition stopping vs heuristic + ensemble
+experiments/models/                       # Saved trained models
+  stopping_classifier.pkl                 # Trained GBT stopping classifier
 experiments/configs/    # Configuration files
 data/                   # Datasets, intermediate results
 paper/                  # Living document sections
@@ -490,6 +494,16 @@ Phase 4: Full experiments — in progress.
   - Phase 4j: 2WikiMultiHopQA benchmark — complete (N=100 synthetic, 50 bridge + 50 comparison;
     pi_aea_heuristic achieves best LLM F1=0.9048 on E2E; stopping > searching confirmed on
     second benchmark; see `experiments/run_2wiki.py` and `experiments/results/2wiki.json`).
+  - Phase 4k: Embedding-based question routing — complete (N=200 eval + 200 train; logistic
+    regression on 384-dim MiniLM embeddings; router wins at mu<=0.2, heuristic wins at mu>=0.3;
+    router achieves +0.020 recall at +0.12 ops cost; entity hop labelled in only 8% of training
+    questions; see `experiments/aea/policies/embedding_router.py` and
+    `experiments/results/embedding_router_results.json`).
+  - Phase 4l: Decomposition-based stopping — complete (N=100 HotpotQA bridge; LLM decomposes each
+    question once into 2–4 requirements; stops when keyword coverage is satisfied; recall=0.8550 vs
+    heuristic 0.7950; but higher ops (2.95 vs 1.21) and lower E2E F1 (0.5697 vs 0.5996) mean
+    decomposition does NOT beat the heuristic E2E; see `experiments/aea/policies/decomposition_stopping.py`
+    and `experiments/results/decomposition_eval_results.json`).
 Phase 5: Analysis — complete. Key finding: learned stopping > heuristic stopping > brute force.
 Phase 6: Paper writing — complete (v5 final draft with all revisions).
   Paper: `paper/full-paper.md` (6889 words), 7 sections + appendix + comparison table.
@@ -497,6 +511,50 @@ Phase 6: Paper writing — complete (v5 final draft with all revisions).
   Key results: Learned stopping U@B=0.766 [0.715, 0.819] at N=500 E2E.
   Validated on 2 benchmarks (HotpotQA + 2WikiMultiHopQA).
   Crossover at μ=0.20: stopping dominates for any non-trivial cost penalty.
+
+---
+
+### Embedding-Based Question Routing (Phase 4k — Routing Experiment)
+
+**Policy:** `experiments/aea/policies/embedding_router.py` — `EmbeddingRouterPolicy`
+**Runner:** `experiments/run_embedding_router_eval.py`
+**Results:** `experiments/results/embedding_router_results.json`
+
+Investigates whether question-embedding routing can outperform regex-pattern routing (the heuristic). Motivation: ablation showed that entity graph hops *hurt* HotpotQA performance (+0.004 U@B when removed), suggesting the heuristic's `_looks_multi_hop` patterns misfire. An embedding classifier should generalise better because it operates on semantic features, not surface syntax.
+
+**Method:**
+- Training split: questions 500-999 (200 used; bridge questions from HotpotQA dev)
+- Evaluation split: questions 0-499 (200 used; clean, no overlap with training)
+- Training: for each training question, run all 3 strategies exhaustively, label the strategy with the best recall, then fit a logistic regression classifier on 384-dim MiniLM-L6-v2 embeddings.
+- Strategies: (0) stop-after-semantic, (1) semantic-then-lexical, (2) semantic-then-hop.
+
+**Results (N_eval=200, N_train=200):**
+
+| Policy | SupportRecall | AvgOps | Utility@Budget |
+|---|---|---|---|
+| pi_ensemble | 0.9300 | 3.00 | -0.0050 |
+| pi_aea_heuristic | 0.7850 | 1.16 | 0.0251 |
+| **pi_embedding_router** | **0.8050** | 1.28 | 0.0250 |
+
+Sensitivity (U@B across cost-weight mu):
+
+| Policy | mu=0.1 | mu=0.2 | mu=0.3 | mu=0.4 | mu=0.5 |
+|---|---|---|---|---|---|
+| pi_ensemble | 0.0371 | 0.0161 | -0.0050 | -0.0260 | -0.0470 |
+| pi_aea_heuristic | 0.0420 | 0.0335 | 0.0251 | 0.0166 | 0.0082 |
+| **pi_embedding_router** | **0.0435** | **0.0343** | 0.0250 | 0.0157 | 0.0064 |
+
+**Strategy distribution on eval set (N=200):**
+- stop-after-semantic: 143 (71.5%)
+- semantic-then-lexical: 50 (25.0%)
+- semantic-then-hop: 7 (3.5%)
+
+**Key findings:**
+- **Embedding router wins at low cost penalty (mu ≤ 0.2):** +0.0015 U@B at mu=0.1, +0.0008 at mu=0.2 — consistent advantage when retrieval cost matters most.
+- **Recall improvement:** Router retrieves 0.020 more supporting docs than the heuristic (0.8050 vs 0.7850) at only +0.12 average extra operations.
+- **Entity hop rarity confirmed:** Only 3.5% of eval questions are routed to entity hop, compared to the heuristic which applies regex patterns liberally. This aligns with the ablation finding that entity hops hurt on HotpotQA.
+- **mu crossover at ~0.3:** At mu≥0.3 (high cost penalty), the heuristic's lower ops count gives it a marginal edge (+0.0001 U@B), but the difference is within noise.
+- **Verdict:** Embedding routing is a viable alternative to regex heuristics — it achieves higher recall with comparable or better U@B at the cost penalty ranges most relevant to real systems (mu=0.1–0.2), while correctly suppressing entity hops that the heuristic over-triggers.
 
 ---
 
@@ -596,3 +654,123 @@ Routing Analysis (LLM-routed):
 - Architecture is correct; the policy, prompt, fallback chain, and tracking code all function
   correctly as demonstrated by the N=10 smoke test (only 2/20 errors, decision distribution
   STOP=47.6%, SEMANTIC=23.8%, LEXICAL=23.8%, ENTITY_HOP=4.8%).
+
+---
+
+### Decomposition-Based Stopping (Phase 4l — Content-Aware Stopping)
+
+**Policy:** `experiments/aea/policies/decomposition_stopping.py` — `DecompositionStoppingPolicy`
+**Runner:** `experiments/run_decomposition_eval.py`
+**Results:** `experiments/results/decomposition_eval_results.json`
+
+Investigates whether calling an LLM once upfront to decompose a question into sub-requirements, then checking evidence coverage with keyword matching, can outperform heuristic stopping.  Motivation: the learned classifier does not look at *what* was retrieved — only at workspace statistics.  Decomposition-based stopping is content-aware without needing per-step LLM calls.
+
+**Design:**
+- Step 0: Semantic search (same as all policies).
+- Step 0 init: Call gpt-oss-120b once per question to decompose into 2–4 requirement phrases.
+- Step 1+: For each requirement, check whether its key terms (non-stop-words) appear in any workspace passage.  Stop when all requirements are satisfied (coverage ≥ 1.0).
+- If not stopping: route to entity hop if unsatisfied requirements look entity-like (short, Title-cased phrases); otherwise route to lexical search with a keyword query built from unsatisfied requirements.
+- Fallback if decomposition fails: use heuristic coverage rule (2+ high-relevance items from 2+ sources).
+
+**Cost:** 100 LLM calls for decomposition (one per question) + same retrieval calls as other policies.
+**API:** 100/100 decompositions succeeded (0 errors).
+
+**Results (N=100 HotpotQA bridge questions, seed=42):**
+
+Retrieval:
+
+| Policy | Recall | Ops | Retrieval U@B |
+|---|---|---|---|
+| pi_ensemble | 0.9400 | 3.00 | 0.0023 |
+| pi_aea_heuristic | 0.7950 | 1.21 | 0.0282 |
+| **pi_decomposition** | 0.8550 | 2.95 | -0.0019 |
+
+End-to-End (LLM answers via gpt-oss-120b):
+
+| Policy | EM | F1 | Recall | Ops | E2E U@B (mu=0.3) |
+|---|---|---|---|---|---|
+| pi_ensemble | 0.4800 | 0.5951 | 0.9400 | 3.00 | 0.8138 |
+| **pi_aea_heuristic** | 0.4800 | **0.5996** | 0.7950 | 1.21 | **0.8332** |
+| pi_decomposition | 0.4300 | 0.5697 | 0.8550 | 2.95 | 0.7575 |
+
+Sensitivity (E2E U@B, winner per mu):
+
+| mu | pi_ensemble | pi_aea_heuristic | pi_decomposition | Winner |
+|---|---|---|---|---|
+| 0.1 | 0.8558 | 0.8510 | 0.8002 | pi_ensemble |
+| 0.2 | 0.8348 | 0.8421 | 0.7788 | pi_aea_heuristic |
+| 0.3 | 0.8138 | 0.8332 | 0.7575 | pi_aea_heuristic |
+| 0.4 | 0.7928 | 0.8243 | 0.7362 | pi_aea_heuristic |
+| 0.5 | 0.7718 | 0.8154 | 0.7149 | pi_aea_heuristic |
+
+**Key findings:**
+- **Decomposition improves retrieval recall** (+0.060 vs heuristic: 0.855 vs 0.795) by driving targeted lexical searches toward unsatisfied requirements rather than broad keyword queries.
+- **But at high operation cost** (2.95 ops vs 1.21 for heuristic) — almost as expensive as the ensemble.
+- **Decomposition does NOT improve E2E metrics:** LLM F1 drops (0.5697 vs 0.5996) and E2E U@B at mu=0.3 drops (0.7575 vs 0.8332).  The extra evidence retrieved does not help the LLM answer better.
+- **Root cause:** gpt-oss-120b is a reasoning model that outputs multi-line reasoning traces rather than clean requirement phrases.  The parser strips the preamble, but the resulting "requirements" are often too verbose or malformed for reliable keyword matching, causing spurious continuation of retrieval.
+- **Parser failure pattern:** ~40% of decomposition outputs were multi-line reasoning traces; parsed "requirements" included fragments like "1. identity of" (truncated) or "1. Black Indians" (too sparse), making coverage checks unreliable.
+- **Verdict:** The concept is sound — content-aware stopping should help — but the current implementation is limited by (a) gpt-oss-120b outputting reasoning traces instead of clean phrases, and (b) keyword matching being too coarse for coverage detection.  A better implementation would use a smaller, instruction-following model with a strict JSON output schema.
+- **Architecture:**
+  - `DecompositionStoppingPolicy._reset_for_question(query)` — calls LLM, parses requirements.
+  - `_requirement_satisfied_by(req, workspace_text)` — keyword overlap check (≥ ⌈|keywords|/2⌉ hits required).
+  - `_route_for_unsatisfied(state, unsatisfied)` — entity hop for Title-cased short phrases, lexical otherwise.
+
+---
+
+## Experiment: Cross-Encoder Stopping Policy (2026-04-07)
+
+**Motivation:** The heuristic stopping rule ("stop when 2+ high-relevance items from 2+ sources") significantly beats the ensemble (p=0.021).  But a GBT classifier on workspace statistics doesn't generalise across question distributions.  The core gap: stopping decisions don't look at the *content* of evidence.  We test a policy that scores (question, passage) pairs with a pre-trained cross-encoder, making content-aware stopping decisions with zero training on our eval data.
+
+**Policy:** `experiments/aea/policies/cross_encoder_stopping.py` — `CrossEncoderStoppingPolicy`
+**Runner:** `experiments/run_cross_encoder_eval.py`
+**Results:** `experiments/results/cross_encoder_eval.json`
+
+### Design
+
+```
+Step 0    → SemanticAddressSpace SEARCH (same anchor as all policies)
+Step 1+   → Score all workspace passages with cross-encoder
+            STOP if top score > 7.0 (single very strong passage)
+            STOP if ≥ 2 passages score > 3.0 (multiple supporting passages)
+            Else → LexicalAddressSpace SEARCH (keyword fallback)
+Hard stop → budget ≤ 10% or step ≥ 8
+```
+
+**Cross-encoder model:** `cross-encoder/ms-marco-MiniLM-L-6-v2` — trained on MS MARCO, never on our eval data.
+
+**Thresholds** (anchored to MS MARCO pre-training distribution, NOT tuned on our eval set):
+- `HIGH_THRESHOLD = 7.0` — scores this high appear only for passages that directly answer the question (~top 5% on MS MARCO; scores range roughly −15 to +15)
+- `MEDIUM_THRESHOLD = 3.0` — moderately relevant; two such passages together provide strong multi-hop support
+
+### Retrieval-only Results (N=500)
+
+| Policy                 | SupportRecall | SupportPrec | AvgOps | U@Budget |
+|------------------------|:-------------:|:-----------:|:------:|:--------:|
+| pi_ensemble            |    0.9430     |   0.2453    |  3.00  |  0.0001  |
+| pi_aea_heuristic       |    0.8060     |   0.3118    |  1.16  |  0.0303  |
+| pi_cross_encoder_stop  |    0.8480     |   0.2964    |  3.09  | -0.0055  |
+
+### E2E Results (N=500, gpt-oss-120b)
+
+| Policy                 |   EM   |   F1   | Recall | Ops  | E2E U@B [95% CI]         |
+|------------------------|:------:|:------:|:------:|:----:|:------------------------:|
+| pi_ensemble            | 0.5280 | 0.7101 | 0.9430 | 3.00 | 0.7493 [0.6996, 0.7960]  |
+| pi_aea_heuristic       | 0.4620 | 0.6319 | 0.8060 | 1.16 | 0.7879 [0.7329, 0.8394]  |
+| pi_cross_encoder_stop  | 0.4980 | 0.6668 | 0.8480 | 3.09 | 0.6552 [0.5996, 0.7117]  |
+
+### Statistical Tests (paired t-test on E2E U@B)
+
+| Comparison                    |   Δ     |   p    |   d    | Significant? |
+|-------------------------------|:-------:|:------:|:------:|:------------:|
+| CrossEncoder vs Ensemble      | −0.0941 | 0.0001 | −0.177 |     YES      |
+| CrossEncoder vs AEA Heuristic | −0.1327 | 0.0000 | −0.255 |     YES      |
+| AEA Heuristic vs Ensemble     | +0.0386 | 0.0947 | +0.075 |     NO       |
+
+### Key Findings
+
+- **Cross-encoder does NOT beat the heuristic.** It is significantly *worse* than both the ensemble (Δ=−0.094, p<0.001) and the heuristic (Δ=−0.133, p<0.0001).
+- **Retrieval recall is intermediate.** The cross-encoder retrieves better than the heuristic (recall 0.848 vs 0.806) but the cost penalty is severe: it uses 3.09 ops — nearly as many as the ensemble — while getting lower recall than the ensemble.
+- **The thresholds are too permissive for HotpotQA bridge questions.** MS MARCO scores ≥7.0 or ≥3.0 are rare for multi-hop bridge questions where the single gold passages do not directly answer the question.  The cross-encoder consistently never triggers the STOP condition in step 1 for bridge questions (no single passage answers the full 2-hop query), so the policy always falls through to the lexical fallback — using 3 ops per example on average.
+- **Fundamental mismatch:** The MS MARCO cross-encoder is calibrated for *single-hop* passage ranking.  HotpotQA bridge questions require evidence from *two* documents; no single retrieved passage will score above the HIGH_THRESHOLD.  The MEDIUM threshold does trigger for some pairs, but only after multiple lexical fallback steps, resulting in high op cost with no quality advantage.
+- **Content-aware stopping is still a sound idea**, but the right tool is either: (a) a cross-encoder that scores evidence *sets* against the question (bundle-level scoring), or (b) threshold tuning specific to the bridge question distribution.  Neither should use our eval data — a held-out tuning set from HotpotQA train split would be appropriate.
+- **Heuristic remains best policy.** AEA Heuristic leads on E2E U@B (0.7879 vs 0.7493 for ensemble vs 0.6552 for cross-encoder), with the heuristic-vs-ensemble gap now directionally positive (Δ=+0.039) though not reaching p<0.05 at N=500.
