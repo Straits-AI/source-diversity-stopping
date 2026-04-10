@@ -6,11 +6,13 @@ We describe the benchmarks, baselines, ablation variants, evaluation metrics, an
 
 ### HotpotQA Bridge Subset (Yang et al., 2018)
 
-We use the distractor validation split of HotpotQA. From the full 5,918 distractor-split questions we select the first 100 questions whose `type` field equals `"bridge"`, yielding a fixed, deterministic subset. Each question is accompanied by exactly 10 context paragraphs: 2 gold supporting paragraphs and 8 distractor paragraphs drawn from Wikipedia. Bridge questions require a two-step inference chain: the system must first locate a passage containing entity A, extract a bridge entity mentioned there, and then locate a second passage whose content concerns that bridge entity (entity B). Because question text explicitly names entity A, there is high lexical overlap between the question and the first-hop gold paragraph.
+We use the distractor validation split of HotpotQA. Each question is accompanied by exactly 10 context paragraphs: 2 gold supporting paragraphs and 8 distractor paragraphs drawn from Wikipedia. Bridge questions require a two-step inference chain: the system must first locate a passage containing entity A, extract a bridge entity mentioned there, and then locate a second passage whose content concerns that bridge entity (entity B). Because question text explicitly names entity A, there is high lexical overlap between the question and the first-hop gold paragraph.
+
+For retrieval-only evaluation, we use the first 500 bridge questions (N=500). For end-to-end evaluation with LLM answer generation, we also use N=500. For ablation studies, we use the first 100 questions (N=100).
 
 | Property | Value |
 |---|---|
-| Total questions | 100 |
+| Total questions | 500 (retrieval, E2E) / 100 (ablation) |
 | Context paragraphs per question | 10 |
 | Gold supporting paragraphs | 2 |
 | Distractor paragraphs | 8 |
@@ -43,18 +45,7 @@ To verify that results are not specific to the closed 10-paragraph setting, we e
 
 ### Heterogeneous Benchmark v2 (this work)
 
-To test robustness across a broader range of retrieval challenges, we construct a synthetic benchmark of 100 questions spanning six task types, generated deterministically with seed 42.
-
-| Task Type | Count | Key Challenge |
-|---|---|---|
-| Entity Bridge | 20 | Bridge entity absent from question text |
-| Implicit Bridge | 20 | Bridge relation expressed paraphrastically |
-| Semantic + Computation | 20 | Requires semantic retrieval then arithmetic |
-| Low Lexical Overlap | 20 | < 15% content-word overlap between question and gold |
-| Multi-hop Chain | 10 | Sequential retrieval hops |
-| Discovery + Extraction | 10 | Gold paragraph unknown until prior hop reveals it |
-
-Two design invariants are enforced programmatically: (1) **Entity isolation** — for bridge tasks, bridge entities do not appear in the question text; (2) **Lexical isolation** — for low-overlap tasks, content word overlap is below 15%.
+We also constructed a synthetic heterogeneous benchmark (100 questions, 6 task types) for development purposes; see Appendix for details.
 
 ## 4.2 Baselines
 

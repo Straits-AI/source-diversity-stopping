@@ -8,7 +8,7 @@ This is an honest cost-quality tradeoff, not a universal superiority claim. The 
 
 ## 6.2 The Positive Routing Gap
 
-The LLM-routed policy demonstrates that positive routing — choosing the right substrate for each question — is achievable. Its action distribution (STOP=33%, SEMANTIC=19%, LEXICAL=35%, HOP=14%) shows genuine per-question substrate variation, and its higher recall (0.845 vs 0.795) confirms that the LLM identifies evidence gaps the heuristic misses.
+The LLM-routed policy demonstrates that positive routing — choosing the right substrate for each question — is achievable. Its action distribution (STOP=33%, SEMANTIC=19%, LEXICAL=35%, HOP=14%) shows genuine per-question substrate variation, and its higher recall (0.845 vs 0.795, from a separate evaluation run; see Section 5.4) confirms that the LLM identifies evidence gaps the heuristic misses.
 
 But positive routing is not yet cost-efficient. The gap between the LLM router's routing intelligence and the heuristic's cost discipline identifies the central open challenge: **calibrated stopping** — a policy that combines the LLM's ability to recognize genuinely insufficient evidence with the heuristic's discipline to stop when evidence is merely adequate rather than comprehensive.
 
@@ -16,24 +16,24 @@ We conjecture that the optimal policy lies between these two extremes: it would 
 
 ## 6.3 Comparison with Existing Systems
 
-Our comparison with FLARE, Self-RAG, Adaptive-RAG, IRCoT, and CRAG (Appendix B) reveals that AEA occupies a distinct niche: it is the only system that (a) routes across qualitatively different substrate types, (b) includes an explicit cost model, and (c) treats stopping as a first-class routing decision.
+Our comparison with FLARE, Self-RAG, Adaptive-RAG, IRCoT, and CRAG reveals that our approach occupies a distinct niche: it is the only system that (a) routes across qualitatively different substrate types, (b) includes an explicit cost model, and (c) treats stopping as a first-class routing decision.
 
 Direct numerical comparison is not valid: those systems report downstream QA accuracy after full LLM generation on different benchmarks with different assumptions. However, the design dimension analysis shows that none of the existing systems addresses the stopping-vs-routing tradeoff that our experiments identify as central.
 
 ## 6.4 Why the Heuristic Resists Improvement: A Root Cause Analysis
 
-The central puzzle of our experimental program is not that the heuristic stopping rule works well -- that was expected from the ablation analysis (Section 5.3). The puzzle is that three qualitatively different sophisticated approaches all fail to improve upon it, each for a different proximate reason but -- as we argue below -- for the same underlying cause. This section provides a rigorous analysis of why simple structural stopping signals resist replacement by content-aware, learned, or decomposition-based alternatives.
+The central puzzle of our experimental program is not that the heuristic stopping rule works well -- that was expected from the ablation analysis (Section 5.3). The puzzle is that five qualitatively different sophisticated approaches all fail to improve upon it, each for a different proximate reason but -- as we argue below -- for the same underlying cause. The following analysis proposes explanatory hypotheses for each failure, grounded in the experimental evidence but necessarily post-hoc. This section provides a rigorous analysis of why simple structural stopping signals resist replacement by content-aware, learned, or decomposition-based alternatives.
 
 ### 6.4.1 The Empirical Phenomenon
 
-We tested four approaches designed to improve on the heuristic's stopping decision ("stop when the workspace contains 2+ high-relevance items from 2+ distinct sources"):
+We tested five approaches designed to improve on the heuristic's stopping decision ("stop when the workspace contains 2+ high-relevance items from 2+ distinct sources"):
 
 | Approach | Mechanism | AvgOps | E2E U@B | vs Heuristic |
 |---|---|---|---|---|
-| Cross-encoder stopping | MS MARCO scores (question, passage) pairs | 3.09 | 0.655 | -0.133 (p<0.0001) |
-| NLI bundle assessment | DeBERTa-v3 NLI on concatenated evidence | 6.09 | 0.433 | -0.383 (p<0.0001) |
-| LLM decomposition | gpt-oss-120b decomposes question into sub-requirements | 2.95 | 0.758 | -0.030 |
-| Learned GBT classifier | Gradient boosted tree on workspace statistics | 5.00 | 0.498 | catastrophic |
+| Cross-encoder stopping | MS MARCO scores (question, passage) pairs | 3.09 | 0.655 | -0.104 (p<0.0001) |
+| NLI bundle assessment | DeBERTa-v3 NLI on concatenated evidence | 6.09 | 0.433 | -0.326 (p<0.0001) |
+| LLM decomposition | gpt-oss-120b decomposes question into sub-requirements | 2.95 | 0.758 | -0.001 |
+| Learned GBT classifier | Gradient boosted tree on workspace statistics | 5.00 | 0.498 | -0.261 (catastrophic) |
 | Embedding router | Question embedding predicts best retrieval strategy | 1.28 | tied | +0.001 |
 | **Heuristic** | **2+ items from 2+ sources** | **1.16** | **0.759** | **--** |
 
@@ -53,7 +53,7 @@ Structural signals have three properties that content signals lack:
 
 ### 6.4.3 Why Content-Aware Stopping Fails on Multi-Hop QA
 
-The cross-encoder stopping policy uses a pre-trained MS MARCO model to score (question, passage) pairs. It stops when the top cross-encoder score exceeds a high threshold (7.0) or when two or more passages exceed a medium threshold (3.0). Yet it achieves the worst E2E U@B of any policy tested (0.655), significantly below even the brute-force ensemble (0.707, p=0.0001).
+The cross-encoder stopping policy uses a pre-trained MS MARCO model to score (question, passage) pairs. It stops when the top cross-encoder score exceeds a high threshold (7.0) or when two or more passages exceed a medium threshold (3.0). Yet it achieves a worse E2E U@B than both the heuristic and the ensemble (0.655), significantly below even the brute-force ensemble (0.707, p=0.0001).
 
 The root cause is a **set function decomposition failure**. Multi-hop questions require an evidence *bundle* -- a set of passages that jointly contain the answer even though no individual passage does. Consider "What nationality is the director of Jaws?" The evidence consists of two passages: one identifying Steven Spielberg as the director, and another identifying Spielberg as American. Neither passage, scored independently against the full question, receives a high cross-encoder score, because neither individually answers the question.
 
@@ -113,7 +113,7 @@ The stopping hierarchy -- structural heuristic > content-aware stopping > learne
 
 **Second, structural signals should be the default for stopping decisions.** Content-aware stopping signals fail to generalize across question distributions, while structural signals are distribution-invariant by construction. Design principle: **default to structural stopping and escalate to content-aware stopping only when structural signals are uninformative.**
 
-**Third, the stopping problem is harder than it looks.** The four failures span the full spectrum of techniques -- pretrained models, LLM reasoning, supervised learning, embedding classification -- and none succeeds. This suggests the stopping problem in multi-hop retrieval has structure that resists the standard ML playbook, specifically because each new question is a new reasoning chain. Research on distribution-robust stopping criteria, drawing on robust statistics and optimal stopping theory, is a necessary complement to the current focus on retrieval quality and routing intelligence.
+**Third, the stopping problem is harder than it looks.** The five failures span the full spectrum of techniques -- pretrained models, LLM reasoning, supervised learning, embedding classification -- and none succeeds. This suggests the stopping problem in multi-hop retrieval has structure that resists the standard ML playbook, specifically because each new question is a new reasoning chain. Research on distribution-robust stopping criteria, drawing on robust statistics and optimal stopping theory, is a necessary complement to the current focus on retrieval quality and routing intelligence.
 
 ## 6.5 Limitations
 
@@ -121,7 +121,7 @@ The stopping hierarchy -- structural heuristic > content-aware stopping > learne
 
 2. **Non-deterministic LLM answers.** Answer generation via gpt-oss-120b is non-deterministic, producing slight absolute U@B variation across runs (Tables 1 and 3). Relative comparisons within each evaluation are valid.
 
-3. **Custom evaluation metric.** Utility@Budget is author-defined. The specific η and μ values determine the ranking — sensitivity analysis across parameter ranges is reported in Appendix C.
+3. **Custom evaluation metric.** Utility@Budget is author-defined. The specific η and μ values determine the ranking — sensitivity analysis across parameter ranges is reported in Section 5.5.
 
 4. **Three address spaces.** Real retrieval environments include web search, tool invocation, and structural navigation. Cost differentials across these modalities are larger, potentially amplifying the benefit of selective stopping.
 

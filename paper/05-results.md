@@ -4,7 +4,7 @@ All results in this section use the clean experimental split (train: questions 5
 
 ## 5.1 Retrieval Quality (N=500)
 
-On retrieval-only evaluation (N=500, 5 seeds, bootstrap CIs), the heuristic stopping policy achieves the highest support recall (0.810) among stopping-based policies at the lowest operation count (1.15). All comparisons between the heuristic and single-substrate baselines are statistically significant (paired permutation tests, p < 0.0001, Cohen's d = 0.807 vs π_semantic). Full retrieval-only results are reported in Appendix D.
+On retrieval-only evaluation (N=500, 5 seeds, bootstrap CIs), the heuristic stopping policy achieves the highest support recall (0.806) among stopping-based policies at the lowest operation count (1.16). All comparisons between the heuristic and single-substrate baselines are statistically significant (paired permutation tests, p < 0.0001, Cohen's d = 0.807 vs π_semantic).
 
 ## 5.2 End-to-End Answer Quality (N=500)
 
@@ -122,9 +122,9 @@ To address the concern that results may be specific to bridge questions, we eval
 
 The heuristic beats the ensemble on **both** question types with high statistical significance (p < 0.0001 in all cases). Comparison questions show a *larger* advantage than bridge questions (Cohen's d = 0.42 vs 0.37, absolute Δ 48% larger). The structural stopping rule is type-agnostic: it operates on workspace statistics, not question-type patterns.
 
-## 5.8 Generalization: Open-Domain Retrieval (5x Candidate Set)
+## 5.8 Generalization: Diluted-Distractor Retrieval (5x Candidate Set)
 
-To address the concern that results may be specific to 10-paragraph closed sets, we expand the candidate pool for 200 bridge questions from 10 to 50 paragraphs (2 gold + 48 distractors). The additional 40 distractors are sampled from other questions' paragraphs (64,900 unique paragraphs available), simulating a harder open-domain setting.
+To address the concern that results may be specific to 10-paragraph closed sets, we expand the candidate pool for 200 bridge questions from 10 to 50 paragraphs (2 gold + 48 distractors). The additional 40 distractors are sampled from other questions' paragraphs (64,900 unique paragraphs available), simulating a harder, more diluted retrieval setting.
 
 **Table 6.** Open-domain retrieval results (retrieval-only, N=200).
 
@@ -171,7 +171,7 @@ The heuristic wins on Utility@Budget on BRIGHT despite the ensemble achieving hi
 | HotpotQA (comparison) | Comparison QA | 193 | +0.045 | <0.000001 | 0.419 |
 | Open-domain (50-para) | Diluted retrieval | 200 | +0.035 | <0.000001 | 0.491 |
 | BRIGHT | Reasoning-intensive | 200 | +0.022 | 0.0026 | 0.216 |
-| 2WikiMultiHopQA | Bridge/comparison | 100 | Heuristic wins | — | — |
+| 2WikiMultiHopQA | Bridge/comparison | 100 | Heuristic wins | not tested | — |
 | HotpotQA E2E (N=500) | End-to-end with LLM | 500 | +0.052 | 0.021 | 0.103 |
 
-The heuristic significantly outperforms comprehensive retrieval in **every setting tested**, with effect sizes ranging from small (d=0.103, E2E) to medium (d=0.491, open-domain). The advantage grows in harder settings (open-domain d=0.491 > standard d=0.379) and holds across three distinct benchmark families (multi-hop QA, reasoning-intensive, diluted retrieval).
+The heuristic outperforms comprehensive retrieval on Utility@Budget in **every setting tested**, with statistical significance in all retrieval-only evaluations (p<0.0001) and in the end-to-end evaluation (p=0.021, small effect size d=0.103). Effect sizes range from small (d=0.103, E2E) to medium (d=0.491, open-domain). The advantage grows in harder settings (open-domain d=0.491 > standard d=0.379) and holds across three distinct benchmark families (multi-hop QA, reasoning-intensive, diluted retrieval).

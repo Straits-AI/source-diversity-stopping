@@ -2,11 +2,11 @@
 
 ## Abstract
 
-When should a retrieval system stop searching? We study this question across three benchmark families — multi-hop QA (HotpotQA, N=1000), reasoning-intensive retrieval (BRIGHT, N=200), and diluted open-domain settings (50 paragraphs per question). A simple structural heuristic — stop when the workspace contains evidence from two or more independent sources — significantly outperforms comprehensive retrieval across all settings (paired t-tests, p<0.003 in all cases, Cohen's d up to 0.49).
+When should a retrieval system stop searching? We study this question across three benchmark families — multi-hop QA (HotpotQA, N=1000), reasoning-intensive retrieval (BRIGHT, N=200), and diluted open-domain settings (50 paragraphs per question). A simple structural heuristic — stop when the workspace contains evidence from two or more independent sources — significantly outperforms comprehensive retrieval under cost-penalized evaluation across three benchmark families (paired t-tests, p≤0.021, Cohen's d up to 0.49).
 
 We then test five principled content-aware alternatives: a pre-trained cross-encoder, an NLI-based bundle sufficiency checker, a learned classifier on trajectory features, LLM-based question decomposition, and an embedding-based router. All five fail. The cross-encoder cannot assess multi-document sufficiency because evidence quality is a set function over passage bundles. The NLI model — which does take bundles as premise — fails because multi-hop questions resist conversion to well-formed entailment hypotheses. The learned classifier overfits to distribution-specific statistics. The LLM decomposition introduces parsing noise. The embedding router confirms the bottleneck is stopping, not routing.
 
-Root cause analysis reveals that the heuristic succeeds because it operates on a **structural signal** — source diversity — that is distribution-invariant, compositionally informative, and computationally free. This connects to classical optimal stopping theory: threshold rules on low-noise observable signals dominate value-estimation approaches when the value function is hard to learn. The heuristic's advantage is invariant to candidate set size (zero degradation at 5x expansion), question type (comparison questions show larger effects than bridge), and benchmark family (multi-hop, reasoning-intensive, diluted retrieval).
+Root cause analysis reveals that the heuristic's success is consistent with its reliance on a **structural signal** — source diversity — that is distribution-invariant, compositionally informative, and computationally free. This connects to classical optimal stopping theory: threshold rules on low-noise observable signals dominate value-estimation approaches when the value function is hard to learn. The heuristic's advantage is robust to candidate set size (zero degradation at 5x expansion) and robust across question type (comparison questions show larger effects than bridge) and benchmark family (multi-hop, reasoning-intensive, diluted retrieval).
 # 1 Introduction
 
 When should a retrieval system stop searching? The dominant paradigm in retrieval-augmented generation commits to a fixed retrieval budget — typically one or two calls to a single index — regardless of whether the retrieved evidence is sufficient or the additional operations are wasteful. Recent adaptive retrieval systems address the sufficiency side: Self-RAG [Asai et al., 2024] learns when to skip retrieval, FLARE [Jiang et al., 2023] triggers retrieval on low-confidence tokens, and Adaptive-RAG [Jeong et al., 2024] routes queries by complexity. Yet these systems operate within a single retrieval modality. The question of when to stop searching across multiple qualitatively different substrates — semantic indexes, keyword indexes, entity graphs — remains underexplored.
@@ -19,7 +19,7 @@ This failure pattern is itself the paper's central contribution. It reveals that
 
 1. **Evidence sufficiency in multi-hop QA is a set function** — it depends on the joint content of passage bundles, not on individual passage scores. Cross-encoders trained on single-passage ranking cannot assess it (Section 6.4.3).
 
-2. **Even bundle-level NLI assessment fails** — multi-hop questions resist conversion to well-formed entailment hypotheses, so NLI models that correctly take the full evidence bundle as premise still cannot determine sufficiency (Section 6.4.3).
+2. **Even bundle-level NLI assessment fails** — multi-hop questions resist conversion to well-formed entailment hypotheses, so NLI models that correctly take the full evidence bundle as premise still cannot determine sufficiency (Section 6.4).
 
 3. **Workspace statistics are distribution-specific** — learned classifiers on trajectory features capture spurious correlations that break under distribution shift (Section 6.4.4).
 
@@ -27,16 +27,16 @@ This failure pattern is itself the paper's central contribution. It reveals that
 
 Our contributions are:
 
-1. **A statistically validated stopping result across three benchmark families**: a simple coverage heuristic significantly outperforms comprehensive retrieval on HotpotQA (p<0.000001, d=0.379, N=1000), BRIGHT (p=0.0026, d=0.216, N=200), and open-domain settings (p<0.000001, d=0.491, N=200). The advantage is invariant to question type (bridge and comparison) and candidate set size (10 vs 50 paragraphs) (Section 5).
+1. **A statistically validated stopping result across three benchmark families**: a simple coverage heuristic significantly outperforms comprehensive retrieval on HotpotQA (p<0.000001, d=0.379, N=1000), BRIGHT (p=0.0026, d=0.216, N=200), and open-domain settings (p<0.000001, d=0.491, N=200). The advantage is invariant to question type (bridge and comparison) and candidate set size (10 vs 50 paragraphs) (Section 5). Note that the end-to-end result (p=0.021, d=0.103) is statistically significant but with a small effect size.
 
-2. **Five controlled failure analyses** showing why content-aware (cross-encoder, NLI), learned (GBT), decomposition-based (LLM), and routing-based (embedding) improvements all fail — each illuminating a different aspect of the stopping problem (Section 5.4, Section 6.4).
+2. **Five controlled failure analyses** showing why content-aware (cross-encoder, NLI), learned (gradient boosted tree (GBT)), decomposition-based (LLM), and routing-based (embedding) improvements all fail — each illuminating a different aspect of the stopping problem (Section 5.4, Section 6.4).
 
 3. **The structural signal thesis**: a unifying explanation grounded in optimal stopping theory for why distribution-invariant structural signals outperform content-specific signals in multi-substrate retrieval stopping (Section 6.4).
 
 4. **Actionable design guidance**: practitioners should default to structural stopping signals, treat stopping as a first-class design target, and augment rather than replace simple heuristics (Section 6.4.7).
 # 2 Related Work
 
-Adaptive External Attention builds on and departs from several active research threads. We survey them in turn, highlighting where each line of work leaves a gap that our policy-level formalization is designed to fill.
+Our approach builds on and departs from several active research threads. We survey them in turn, highlighting where each line of work leaves a gap that our policy-level formalization is designed to fill.
 
 ## 2.1 Retrieval-Augmented Generation
 
@@ -46,7 +46,7 @@ Recent engineering advances push the state of the art within this single-substra
 
 Adaptive invocation has received targeted attention in several systems. Self-RAG [Asai et al., 2024] introduces learned reflection tokens — special symbols inserted during generation that signal whether retrieved passages are relevant or even necessary. By training on these tokens, Self-RAG enables the model to skip retrieval for queries it can answer from parametric knowledge. FLARE [Jiang et al., 2023] takes a complementary approach: it triggers retrieval only when the generator's token probability falls below a confidence threshold during decoding, effectively treating low confidence as a proxy for knowledge insufficiency. Adaptive-RAG [Sequeira et al., 2025] classifies queries by complexity at inference time and routes simpler queries to no-retrieval or single-step retrieval, reserving multi-hop pipelines for complex reasoning tasks. DIVER [Long et al., 2025] introduces multi-stage reasoning retrieval, reporting nDCG@10 of 46.8 on the BRIGHT benchmark, demonstrating that iterative retrieval can substantially outperform single-pass systems.
 
-Collectively, these adaptive systems share an important insight with our work: retrieval avoidance is often as valuable as retrieval itself. Where they differ from AEA is in scope. Self-RAG and FLARE operate within a single retrieval modality, and their skip decisions are entangled with generation rather than expressed as an explicit routing policy. Adaptive-RAG performs routing across retrieval pipeline configurations, not across heterogeneous address spaces such as episodic memory, structured knowledge graphs, and lexical indexes. Our formalization generalizes this skip logic to a budget-aware policy over multiple substrate families.
+Collectively, these adaptive systems share an important insight with our work: retrieval avoidance is often as valuable as retrieval itself. Where they differ from our approach is in scope. Self-RAG and FLARE operate within a single retrieval modality, and their skip decisions are entangled with generation rather than expressed as an explicit routing policy. Adaptive-RAG performs routing across retrieval pipeline configurations, not across heterogeneous address spaces such as episodic memory, structured knowledge graphs, and lexical indexes. Our formalization generalizes this skip logic to a budget-aware policy over multiple substrate families.
 
 ## 2.2 Agentic Retrieval and Tool Use
 
@@ -54,15 +54,15 @@ A parallel tradition treats retrieval as one action in a broader agentic loop. R
 
 Within agentic RAG specifically, several multi-substrate systems have emerged. ExpertRAG [Gumaan et al., 2024] applies a mixture-of-experts routing mechanism to select among specialized RAG pipelines, learning which expert is best suited to each query type. Chain of Agents [Zhang et al., 2024] decomposes long-context tasks across a chain of communicating agents, each handling a segment of the retrieval or reasoning problem, reporting approximately ten percent improvement over single-agent RAG baselines. The Agentic RAG Survey [Singh et al., 2025] provides a systematic taxonomy of these approaches, categorizing systems by their planning depth, tool diversity, and coordination mechanisms.
 
-NousResearch's Hermes Agent represents a practitioner instantiation of multi-substrate memory: it queries conversation history, external documents, and web tools within a single agent loop, without a formalized routing policy. While effective in deployment, the absence of an explicit state representation and budget model means that routing decisions are implicitly baked into the prompt rather than learned or optimized. AEA is perhaps closest in spirit to Hermes in its multi-substrate ambition, but departs from it by providing a formal policy substrate, explicit cost accounting, and a principled avoidance criterion.
+NousResearch's Hermes Agent represents a practitioner instantiation of multi-substrate memory: it queries conversation history, external documents, and web tools within a single agent loop, without a formalized routing policy. While effective in deployment, the absence of an explicit state representation and budget model means that routing decisions are implicitly baked into the prompt rather than learned or optimized. Our approach is perhaps closest in spirit to Hermes in its multi-substrate ambition, but departs from it by providing a formal policy substrate, explicit cost accounting, and a principled avoidance criterion.
 
 ## 2.3 Reinforcement Learning for Retrieval Optimization
 
 A growing body of work applies reinforcement learning to optimize retrieval behavior at training time. DeepRetrieval [Jiang et al., 2025] uses RL to train a query reformulation model, achieving sixty-five percent recall on multi-hop retrieval tasks by generating queries that are better matched to the retrieval index. Search-R1 [Jin et al., 2025] extends the R1-style process reward model to retrieval-augmented reasoning chains, reporting a forty-one percent improvement over standard RAG baselines by learning when to search mid-generation. SmartRAG [Gao et al., 2025] jointly optimizes the retrieval and generation components under an explicit cost model, penalizing unnecessary retrieval calls and demonstrating that cost-aware training yields more efficient pipelines without sacrificing answer quality. Cost-Aware Retrieval [Hashemi et al., 2024] similarly incorporates latency penalties into retrieval ranking, achieving a twenty percent reduction in end-to-end query latency.
 
-At the routing level, RAGRouter [Liu et al., 2025] learns to select among members of a RAG ensemble at inference time, assigning each query to the retrieval system whose characteristics best match the query's structure. This system is perhaps the closest precursor to AEA's routing logic, but it operates over a fixed ensemble of similarly structured retrieval pipelines rather than over qualitatively distinct address spaces — episodic memory, entity graphs, and lexical indexes — whose output distributions and cost profiles differ substantially.
+At the routing level, RAGRouter [Liu et al., 2025] learns to select among members of a RAG ensemble at inference time, assigning each query to the retrieval system whose characteristics best match the query's structure. This system is perhaps the closest precursor to the coverage-driven routing policy's routing logic, but it operates over a fixed ensemble of similarly structured retrieval pipelines rather than over qualitatively distinct address spaces — episodic memory, entity graphs, and lexical indexes — whose output distributions and cost profiles differ substantially.
 
-AEA draws from this RL tradition the insight that routing and avoidance should be optimized objectives, not hand-coded heuristics. However, where these systems learn substrate-specific or pipeline-specific policies, AEA learns a unified policy over a heterogeneous action space that includes the null action of avoidance.
+Our approach draws from this RL tradition the insight that routing and avoidance should be optimized objectives, not hand-coded heuristics. However, where these systems learn substrate-specific or pipeline-specific policies, the coverage-driven routing policy operates over a heterogeneous action space that includes the null action of avoidance.
 
 ## 2.4 Structured Memory and Context Engineering
 
@@ -72,13 +72,13 @@ At the harness level, Meta-Harness [Lee et al., 2026] optimizes which context el
 
 Long-context evaluation work (HELMET, Context Rot, NoLiMa, RULER) demonstrates that synthetic benchmarks poorly predict downstream performance and that all models degrade with context length — motivating our budget-controlled evaluation protocol.
 
-## 2.7 Positioning
+## 2.5 Positioning
 
-AEA occupies a distinct niche relative to all of the above. It is not a new retrieval substrate — it does not improve dense retrieval, structured memory, or graph traversal in isolation. It is not a new generation architecture. It is a formalization of the **policy** over a heterogeneous address space: a runtime decision procedure that determines whether to act, on which substrate, and at what cost, given an explicit state representation and a budget constraint.
+Our approach occupies a distinct niche relative to all of the above. It is not a new retrieval substrate — it does not improve dense retrieval, structured memory, or graph traversal in isolation. It is not a new generation architecture. It is a formalization of the **policy** over a heterogeneous address space: a runtime decision procedure that determines whether to act, on which substrate, and at what cost, given an explicit state representation and a budget constraint.
 
 The systems closest in spirit are SmartRAG, which jointly optimizes retrieval and generation under cost constraints but within a single homogeneous pipeline; Meta-Harness, which optimizes at the harness level but as an offline, code-level transformation rather than a learned runtime policy; and Hermes Agent, which operates across multiple substrates in practice but without a formal policy representation or cost model. RAGRouter and Adaptive-RAG address routing but within substrate families of the same qualitative type.
 
-The gap that AEA fills is the absence of any existing system that simultaneously (a) routes across qualitatively heterogeneous address spaces — episodic memory, entity graphs, lexical indexes, and the null action — (b) maintains an explicit state representation tracking which substrates have been queried and what they returned, (c) operates under a hard budget constraint expressed in latency or token cost, and (d) treats avoidance not as a fallback but as a first-class action whose value is estimated and compared against retrieval on equal footing. Our central finding — that AEA's gains derive primarily from avoidance rather than positive substrate selection — would be invisible to systems that do not include the null action in their routing vocabulary.
+The gap that our approach fills is the absence of any existing system that simultaneously (a) routes across qualitatively heterogeneous address spaces — episodic memory, entity graphs, lexical indexes, and the null action — (b) maintains an explicit state representation tracking which substrates have been queried and what they returned, (c) operates under a hard budget constraint expressed in latency or token cost, and (d) treats avoidance not as a fallback but as a first-class action whose value is estimated and compared against retrieval on equal footing. Our central finding — that the coverage-driven policy's gains derive primarily from avoidance rather than positive substrate selection — would be invisible to systems that do not include the null action in their routing vocabulary.
 # 3 Method
 
 This section describes the coverage-driven retrieval routing policy. The formal constrained MDP framework motivating the design is presented in Appendix A; here we focus on the operational policy and its components.
@@ -163,11 +163,13 @@ We describe the benchmarks, baselines, ablation variants, evaluation metrics, an
 
 ### HotpotQA Bridge Subset (Yang et al., 2018)
 
-We use the distractor validation split of HotpotQA. From the full 5,918 distractor-split questions we select the first 100 questions whose `type` field equals `"bridge"`, yielding a fixed, deterministic subset. Each question is accompanied by exactly 10 context paragraphs: 2 gold supporting paragraphs and 8 distractor paragraphs drawn from Wikipedia. Bridge questions require a two-step inference chain: the system must first locate a passage containing entity A, extract a bridge entity mentioned there, and then locate a second passage whose content concerns that bridge entity (entity B). Because question text explicitly names entity A, there is high lexical overlap between the question and the first-hop gold paragraph.
+We use the distractor validation split of HotpotQA. Each question is accompanied by exactly 10 context paragraphs: 2 gold supporting paragraphs and 8 distractor paragraphs drawn from Wikipedia. Bridge questions require a two-step inference chain: the system must first locate a passage containing entity A, extract a bridge entity mentioned there, and then locate a second passage whose content concerns that bridge entity (entity B). Because question text explicitly names entity A, there is high lexical overlap between the question and the first-hop gold paragraph.
+
+For retrieval-only evaluation, we use the first 500 bridge questions (N=500). For end-to-end evaluation with LLM answer generation, we also use N=500. For ablation studies, we use the first 100 questions (N=100).
 
 | Property | Value |
 |---|---|
-| Total questions | 100 |
+| Total questions | 500 (retrieval, E2E) / 100 (ablation) |
 | Context paragraphs per question | 10 |
 | Gold supporting paragraphs | 2 |
 | Distractor paragraphs | 8 |
@@ -200,18 +202,7 @@ To verify that results are not specific to the closed 10-paragraph setting, we e
 
 ### Heterogeneous Benchmark v2 (this work)
 
-To test robustness across a broader range of retrieval challenges, we construct a synthetic benchmark of 100 questions spanning six task types, generated deterministically with seed 42.
-
-| Task Type | Count | Key Challenge |
-|---|---|---|
-| Entity Bridge | 20 | Bridge entity absent from question text |
-| Implicit Bridge | 20 | Bridge relation expressed paraphrastically |
-| Semantic + Computation | 20 | Requires semantic retrieval then arithmetic |
-| Low Lexical Overlap | 20 | < 15% content-word overlap between question and gold |
-| Multi-hop Chain | 10 | Sequential retrieval hops |
-| Discovery + Extraction | 10 | Gold paragraph unknown until prior hop reveals it |
-
-Two design invariants are enforced programmatically: (1) **Entity isolation** — for bridge tasks, bridge entities do not appear in the question text; (2) **Lexical isolation** — for low-overlap tasks, content word overlap is below 15%.
+We also constructed a synthetic heterogeneous benchmark (100 questions, 6 task types) for development purposes; see Appendix for details.
 
 ## 4.2 Baselines
 
@@ -286,7 +277,7 @@ All results in this section use the clean experimental split (train: questions 5
 
 ## 5.1 Retrieval Quality (N=500)
 
-On retrieval-only evaluation (N=500, 5 seeds, bootstrap CIs), the heuristic stopping policy achieves the highest support recall (0.810) among stopping-based policies at the lowest operation count (1.15). All comparisons between the heuristic and single-substrate baselines are statistically significant (paired permutation tests, p < 0.0001, Cohen's d = 0.807 vs π_semantic). Full retrieval-only results are reported in Appendix D.
+On retrieval-only evaluation (N=500, 5 seeds, bootstrap CIs), the heuristic stopping policy achieves the highest support recall (0.806) among stopping-based policies at the lowest operation count (1.16). All comparisons between the heuristic and single-substrate baselines are statistically significant (paired permutation tests, p < 0.0001, Cohen's d = 0.807 vs π_semantic).
 
 ## 5.2 End-to-End Answer Quality (N=500)
 
@@ -404,9 +395,9 @@ To address the concern that results may be specific to bridge questions, we eval
 
 The heuristic beats the ensemble on **both** question types with high statistical significance (p < 0.0001 in all cases). Comparison questions show a *larger* advantage than bridge questions (Cohen's d = 0.42 vs 0.37, absolute Δ 48% larger). The structural stopping rule is type-agnostic: it operates on workspace statistics, not question-type patterns.
 
-## 5.8 Generalization: Open-Domain Retrieval (5x Candidate Set)
+## 5.8 Generalization: Diluted-Distractor Retrieval (5x Candidate Set)
 
-To address the concern that results may be specific to 10-paragraph closed sets, we expand the candidate pool for 200 bridge questions from 10 to 50 paragraphs (2 gold + 48 distractors). The additional 40 distractors are sampled from other questions' paragraphs (64,900 unique paragraphs available), simulating a harder open-domain setting.
+To address the concern that results may be specific to 10-paragraph closed sets, we expand the candidate pool for 200 bridge questions from 10 to 50 paragraphs (2 gold + 48 distractors). The additional 40 distractors are sampled from other questions' paragraphs (64,900 unique paragraphs available), simulating a harder, more diluted retrieval setting.
 
 **Table 6.** Open-domain retrieval results (retrieval-only, N=200).
 
@@ -453,10 +444,10 @@ The heuristic wins on Utility@Budget on BRIGHT despite the ensemble achieving hi
 | HotpotQA (comparison) | Comparison QA | 193 | +0.045 | <0.000001 | 0.419 |
 | Open-domain (50-para) | Diluted retrieval | 200 | +0.035 | <0.000001 | 0.491 |
 | BRIGHT | Reasoning-intensive | 200 | +0.022 | 0.0026 | 0.216 |
-| 2WikiMultiHopQA | Bridge/comparison | 100 | Heuristic wins | — | — |
+| 2WikiMultiHopQA | Bridge/comparison | 100 | Heuristic wins | not tested | — |
 | HotpotQA E2E (N=500) | End-to-end with LLM | 500 | +0.052 | 0.021 | 0.103 |
 
-The heuristic significantly outperforms comprehensive retrieval in **every setting tested**, with effect sizes ranging from small (d=0.103, E2E) to medium (d=0.491, open-domain). The advantage grows in harder settings (open-domain d=0.491 > standard d=0.379) and holds across three distinct benchmark families (multi-hop QA, reasoning-intensive, diluted retrieval).
+The heuristic outperforms comprehensive retrieval on Utility@Budget in **every setting tested**, with statistical significance in all retrieval-only evaluations (p<0.0001) and in the end-to-end evaluation (p=0.021, small effect size d=0.103). Effect sizes range from small (d=0.103, E2E) to medium (d=0.491, open-domain). The advantage grows in harder settings (open-domain d=0.491 > standard d=0.379) and holds across three distinct benchmark families (multi-hop QA, reasoning-intensive, diluted retrieval).
 # 6 Discussion
 
 ## 6.1 Smart Stopping Beats Smart Searching
@@ -467,7 +458,7 @@ This is an honest cost-quality tradeoff, not a universal superiority claim. The 
 
 ## 6.2 The Positive Routing Gap
 
-The LLM-routed policy demonstrates that positive routing — choosing the right substrate for each question — is achievable. Its action distribution (STOP=33%, SEMANTIC=19%, LEXICAL=35%, HOP=14%) shows genuine per-question substrate variation, and its higher recall (0.845 vs 0.795) confirms that the LLM identifies evidence gaps the heuristic misses.
+The LLM-routed policy demonstrates that positive routing — choosing the right substrate for each question — is achievable. Its action distribution (STOP=33%, SEMANTIC=19%, LEXICAL=35%, HOP=14%) shows genuine per-question substrate variation, and its higher recall (0.845 vs 0.795, from a separate evaluation run; see Section 5.4) confirms that the LLM identifies evidence gaps the heuristic misses.
 
 But positive routing is not yet cost-efficient. The gap between the LLM router's routing intelligence and the heuristic's cost discipline identifies the central open challenge: **calibrated stopping** — a policy that combines the LLM's ability to recognize genuinely insufficient evidence with the heuristic's discipline to stop when evidence is merely adequate rather than comprehensive.
 
@@ -475,24 +466,24 @@ We conjecture that the optimal policy lies between these two extremes: it would 
 
 ## 6.3 Comparison with Existing Systems
 
-Our comparison with FLARE, Self-RAG, Adaptive-RAG, IRCoT, and CRAG (Appendix B) reveals that AEA occupies a distinct niche: it is the only system that (a) routes across qualitatively different substrate types, (b) includes an explicit cost model, and (c) treats stopping as a first-class routing decision.
+Our comparison with FLARE, Self-RAG, Adaptive-RAG, IRCoT, and CRAG reveals that our approach occupies a distinct niche: it is the only system that (a) routes across qualitatively different substrate types, (b) includes an explicit cost model, and (c) treats stopping as a first-class routing decision.
 
 Direct numerical comparison is not valid: those systems report downstream QA accuracy after full LLM generation on different benchmarks with different assumptions. However, the design dimension analysis shows that none of the existing systems addresses the stopping-vs-routing tradeoff that our experiments identify as central.
 
 ## 6.4 Why the Heuristic Resists Improvement: A Root Cause Analysis
 
-The central puzzle of our experimental program is not that the heuristic stopping rule works well -- that was expected from the ablation analysis (Section 5.3). The puzzle is that three qualitatively different sophisticated approaches all fail to improve upon it, each for a different proximate reason but -- as we argue below -- for the same underlying cause. This section provides a rigorous analysis of why simple structural stopping signals resist replacement by content-aware, learned, or decomposition-based alternatives.
+The central puzzle of our experimental program is not that the heuristic stopping rule works well -- that was expected from the ablation analysis (Section 5.3). The puzzle is that five qualitatively different sophisticated approaches all fail to improve upon it, each for a different proximate reason but -- as we argue below -- for the same underlying cause. The following analysis proposes explanatory hypotheses for each failure, grounded in the experimental evidence but necessarily post-hoc. This section provides a rigorous analysis of why simple structural stopping signals resist replacement by content-aware, learned, or decomposition-based alternatives.
 
 ### 6.4.1 The Empirical Phenomenon
 
-We tested four approaches designed to improve on the heuristic's stopping decision ("stop when the workspace contains 2+ high-relevance items from 2+ distinct sources"):
+We tested five approaches designed to improve on the heuristic's stopping decision ("stop when the workspace contains 2+ high-relevance items from 2+ distinct sources"):
 
 | Approach | Mechanism | AvgOps | E2E U@B | vs Heuristic |
 |---|---|---|---|---|
-| Cross-encoder stopping | MS MARCO scores (question, passage) pairs | 3.09 | 0.655 | -0.133 (p<0.0001) |
-| NLI bundle assessment | DeBERTa-v3 NLI on concatenated evidence | 6.09 | 0.433 | -0.383 (p<0.0001) |
-| LLM decomposition | gpt-oss-120b decomposes question into sub-requirements | 2.95 | 0.758 | -0.030 |
-| Learned GBT classifier | Gradient boosted tree on workspace statistics | 5.00 | 0.498 | catastrophic |
+| Cross-encoder stopping | MS MARCO scores (question, passage) pairs | 3.09 | 0.655 | -0.104 (p<0.0001) |
+| NLI bundle assessment | DeBERTa-v3 NLI on concatenated evidence | 6.09 | 0.433 | -0.326 (p<0.0001) |
+| LLM decomposition | gpt-oss-120b decomposes question into sub-requirements | 2.95 | 0.758 | -0.001 |
+| Learned GBT classifier | Gradient boosted tree on workspace statistics | 5.00 | 0.498 | -0.261 (catastrophic) |
 | Embedding router | Question embedding predicts best retrieval strategy | 1.28 | tied | +0.001 |
 | **Heuristic** | **2+ items from 2+ sources** | **1.16** | **0.759** | **--** |
 
@@ -512,7 +503,7 @@ Structural signals have three properties that content signals lack:
 
 ### 6.4.3 Why Content-Aware Stopping Fails on Multi-Hop QA
 
-The cross-encoder stopping policy uses a pre-trained MS MARCO model to score (question, passage) pairs. It stops when the top cross-encoder score exceeds a high threshold (7.0) or when two or more passages exceed a medium threshold (3.0). Yet it achieves the worst E2E U@B of any policy tested (0.655), significantly below even the brute-force ensemble (0.707, p=0.0001).
+The cross-encoder stopping policy uses a pre-trained MS MARCO model to score (question, passage) pairs. It stops when the top cross-encoder score exceeds a high threshold (7.0) or when two or more passages exceed a medium threshold (3.0). Yet it achieves a worse E2E U@B than both the heuristic and the ensemble (0.655), significantly below even the brute-force ensemble (0.707, p=0.0001).
 
 The root cause is a **set function decomposition failure**. Multi-hop questions require an evidence *bundle* -- a set of passages that jointly contain the answer even though no individual passage does. Consider "What nationality is the director of Jaws?" The evidence consists of two passages: one identifying Steven Spielberg as the director, and another identifying Spielberg as American. Neither passage, scored independently against the full question, receives a high cross-encoder score, because neither individually answers the question.
 
@@ -572,7 +563,7 @@ The stopping hierarchy -- structural heuristic > content-aware stopping > learne
 
 **Second, structural signals should be the default for stopping decisions.** Content-aware stopping signals fail to generalize across question distributions, while structural signals are distribution-invariant by construction. Design principle: **default to structural stopping and escalate to content-aware stopping only when structural signals are uninformative.**
 
-**Third, the stopping problem is harder than it looks.** The four failures span the full spectrum of techniques -- pretrained models, LLM reasoning, supervised learning, embedding classification -- and none succeeds. This suggests the stopping problem in multi-hop retrieval has structure that resists the standard ML playbook, specifically because each new question is a new reasoning chain. Research on distribution-robust stopping criteria, drawing on robust statistics and optimal stopping theory, is a necessary complement to the current focus on retrieval quality and routing intelligence.
+**Third, the stopping problem is harder than it looks.** The five failures span the full spectrum of techniques -- pretrained models, LLM reasoning, supervised learning, embedding classification -- and none succeeds. This suggests the stopping problem in multi-hop retrieval has structure that resists the standard ML playbook, specifically because each new question is a new reasoning chain. Research on distribution-robust stopping criteria, drawing on robust statistics and optimal stopping theory, is a necessary complement to the current focus on retrieval quality and routing intelligence.
 
 ## 6.5 Limitations
 
@@ -580,7 +571,7 @@ The stopping hierarchy -- structural heuristic > content-aware stopping > learne
 
 2. **Non-deterministic LLM answers.** Answer generation via gpt-oss-120b is non-deterministic, producing slight absolute U@B variation across runs (Tables 1 and 3). Relative comparisons within each evaluation are valid.
 
-3. **Custom evaluation metric.** Utility@Budget is author-defined. The specific η and μ values determine the ranking — sensitivity analysis across parameter ranges is reported in Appendix C.
+3. **Custom evaluation metric.** Utility@Budget is author-defined. The specific η and μ values determine the ranking — sensitivity analysis across parameter ranges is reported in Section 5.5.
 
 4. **Three address spaces.** Real retrieval environments include web search, tool invocation, and structural navigation. Cost differentials across these modalities are larger, potentially amplifying the benefit of selective stopping.
 
@@ -599,13 +590,13 @@ The stopping hierarchy -- structural heuristic > content-aware stopping > learne
 **Budget sensitivity.** The hierarchy may invert under very tight budgets (where any retrieval is expensive) or very loose budgets (where cost is negligible). Characterizing the budget regime where each policy dominates is an important practical question.
 # 7 Conclusion
 
-We studied when to stop retrieving across heterogeneous substrates and discovered that a simple structural heuristic — stop when evidence has converged from two independent sources — significantly outperforms comprehensive retrieval across three benchmark families: multi-hop QA (HotpotQA, p<0.000001, N=1000), reasoning-intensive retrieval (BRIGHT, p=0.0026, N=200), and diluted open-domain settings (p<0.000001, N=200, 5x candidate expansion). The advantage is invariant to question type and grows in harder settings (Cohen's d increases from 0.38 to 0.49 under distractor dilution).
+We studied when to stop retrieving across heterogeneous substrates and discovered that a simple structural heuristic — stop when evidence has converged from two independent sources — significantly outperforms comprehensive retrieval across three benchmark families: multi-hop QA (HotpotQA, p<0.000001, N=1000), reasoning-intensive retrieval (BRIGHT, p=0.0026, N=200), and diluted open-domain settings (p<0.000001, N=200, 5x candidate expansion). The advantage is robust across question types and grows in harder settings (Cohen's d increases from 0.38 to 0.49 under distractor dilution).
 
-Five principled content-aware alternatives all fail to improve on this heuristic. The cross-encoder fails because it scores passages individually, not as bundles. The NLI model — which correctly takes full bundles as premise — fails because multi-hop questions resist conversion to well-formed entailment hypotheses. The learned classifier fails because workspace statistics are distribution-specific. The LLM decomposition fails because parsing noise causes the policy to never stop. The embedding router confirms the bottleneck is stopping, not routing.
+Five principled content-aware alternatives all fail to improve on this heuristic. The cross-encoder fails because it scores passages individually, not as bundles. The NLI model — which correctly takes full bundles as premise — fails because multi-hop questions resist conversion to well-formed entailment hypotheses. The learned classifier fails because workspace statistics are distribution-specific. The LLM decomposition fails because parsing noise causes the policy to rarely stop early. The embedding router confirms the bottleneck is stopping, not routing.
 
 Together, these results establish that **structural stopping signals — distribution-invariant properties of the evidence gathering process — outperform content-specific signals for retrieval stopping decisions.** This connects to classical optimal stopping theory: threshold rules on low-noise observables dominate value-estimation approaches when the value function is hard to learn.
 
-Four implications follow. First, the adaptive retrieval field should treat stopping as a first-class design target. Second, practitioners should default to structural stopping signals rather than investing in content-aware stopping until the bundle assessment problem is solved. Third, learned stopping approaches must be evaluated on out-of-distribution data. Fourth, entity-graph traversal should not be assumed to add value — our ablation shows it contributes nothing on three benchmarks, and the stopping rule captures the same multi-hop benefit more cheaply via source-diversity checking.
+Four implications follow. First, the adaptive retrieval field should treat stopping as a first-class design target. Second, practitioners should default to structural stopping signals rather than investing in content-aware stopping until the bundle assessment problem is solved. Third, learned stopping approaches must be evaluated on out-of-distribution data. Fourth, entity-graph traversal should not be assumed to add value — our ablation shows it contributes nothing on HotpotQA, and the stopping rule captures the same multi-hop benefit more cheaply via source-diversity checking.
 
 The gap between structural stopping (which works) and content-aware stopping (which should work but doesn't yet) defines the key open challenge. Closing it requires models that assess evidence *bundles* rather than individual passages — a set function learning problem that current pre-trained models are not designed for, and that multi-hop question structure makes particularly difficult.
 # Appendix A: Formal Framework

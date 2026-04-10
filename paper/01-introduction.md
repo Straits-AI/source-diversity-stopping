@@ -10,7 +10,7 @@ This failure pattern is itself the paper's central contribution. It reveals that
 
 1. **Evidence sufficiency in multi-hop QA is a set function** — it depends on the joint content of passage bundles, not on individual passage scores. Cross-encoders trained on single-passage ranking cannot assess it (Section 6.4.3).
 
-2. **Even bundle-level NLI assessment fails** — multi-hop questions resist conversion to well-formed entailment hypotheses, so NLI models that correctly take the full evidence bundle as premise still cannot determine sufficiency (Section 6.4.3).
+2. **Even bundle-level NLI assessment fails** — multi-hop questions resist conversion to well-formed entailment hypotheses, so NLI models that correctly take the full evidence bundle as premise still cannot determine sufficiency (Section 6.4).
 
 3. **Workspace statistics are distribution-specific** — learned classifiers on trajectory features capture spurious correlations that break under distribution shift (Section 6.4.4).
 
@@ -18,9 +18,9 @@ This failure pattern is itself the paper's central contribution. It reveals that
 
 Our contributions are:
 
-1. **A statistically validated stopping result across three benchmark families**: a simple coverage heuristic significantly outperforms comprehensive retrieval on HotpotQA (p<0.000001, d=0.379, N=1000), BRIGHT (p=0.0026, d=0.216, N=200), and open-domain settings (p<0.000001, d=0.491, N=200). The advantage is invariant to question type (bridge and comparison) and candidate set size (10 vs 50 paragraphs) (Section 5).
+1. **A statistically validated stopping result across three benchmark families**: a simple coverage heuristic significantly outperforms comprehensive retrieval on HotpotQA (p<0.000001, d=0.379, N=1000), BRIGHT (p=0.0026, d=0.216, N=200), and open-domain settings (p<0.000001, d=0.491, N=200). The advantage is invariant to question type (bridge and comparison) and candidate set size (10 vs 50 paragraphs) (Section 5). Note that the end-to-end result (p=0.021, d=0.103) is statistically significant but with a small effect size.
 
-2. **Five controlled failure analyses** showing why content-aware (cross-encoder, NLI), learned (GBT), decomposition-based (LLM), and routing-based (embedding) improvements all fail — each illuminating a different aspect of the stopping problem (Section 5.4, Section 6.4).
+2. **Five controlled failure analyses** showing why content-aware (cross-encoder, NLI), learned (gradient boosted tree (GBT)), decomposition-based (LLM), and routing-based (embedding) improvements all fail — each illuminating a different aspect of the stopping problem (Section 5.4, Section 6.4).
 
 3. **The structural signal thesis**: a unifying explanation grounded in optimal stopping theory for why distribution-invariant structural signals outperform content-specific signals in multi-substrate retrieval stopping (Section 6.4).
 
