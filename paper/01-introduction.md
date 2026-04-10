@@ -18,7 +18,7 @@ This failure pattern is itself the paper's central contribution. It reveals that
 
 Our contributions are:
 
-1. **A statistically validated stopping result across three benchmark families**: a simple coverage heuristic significantly outperforms comprehensive retrieval on HotpotQA (p<0.000001, d=0.379, N=1000), BRIGHT (p=0.0026, d=0.216, N=200), and open-domain settings (p<0.000001, d=0.491, N=200). The advantage is invariant to question type (bridge and comparison) and candidate set size (10 vs 50 paragraphs) (Section 5). Note that the end-to-end result (p=0.021, d=0.103) is statistically significant but with a small effect size.
+1. **A statistically validated stopping result across three benchmark families**: a simple coverage heuristic significantly outperforms comprehensive retrieval on HotpotQA (p<0.000001, d=0.379, N=1000), BRIGHT (p=0.0026, d=0.216, N=200), and open-domain settings (p<0.000001, d=0.491, N=200). The advantage is robust across question types (bridge and comparison) and candidate set sizes (10 vs 50 paragraphs) (Section 5). Note that the end-to-end result (p=0.021, d=0.103) is statistically significant but with a small effect size.
 
 2. **Five controlled failure analyses** showing why content-aware (cross-encoder, NLI), learned (gradient boosted tree (GBT)), decomposition-based (LLM), and routing-based (embedding) improvements all fail — each illuminating a different aspect of the stopping problem (Section 5.4, Section 6.4).
 

@@ -27,7 +27,7 @@ This failure pattern is itself the paper's central contribution. It reveals that
 
 Our contributions are:
 
-1. **A statistically validated stopping result across three benchmark families**: a simple coverage heuristic significantly outperforms comprehensive retrieval on HotpotQA (p<0.000001, d=0.379, N=1000), BRIGHT (p=0.0026, d=0.216, N=200), and open-domain settings (p<0.000001, d=0.491, N=200). The advantage is invariant to question type (bridge and comparison) and candidate set size (10 vs 50 paragraphs) (Section 5). Note that the end-to-end result (p=0.021, d=0.103) is statistically significant but with a small effect size.
+1. **A statistically validated stopping result across three benchmark families**: a simple coverage heuristic significantly outperforms comprehensive retrieval on HotpotQA (p<0.000001, d=0.379, N=1000), BRIGHT (p=0.0026, d=0.216, N=200), and open-domain settings (p<0.000001, d=0.491, N=200). The advantage is robust across question types (bridge and comparison) and candidate set sizes (10 vs 50 paragraphs) (Section 5). Note that the end-to-end result (p=0.021, d=0.103) is statistically significant but with a small effect size.
 
 2. **Five controlled failure analyses** showing why content-aware (cross-encoder, NLI), learned (gradient boosted tree (GBT)), decomposition-based (LLM), and routing-based (embedding) improvements all fail — each illuminating a different aspect of the stopping problem (Section 5.4, Section 6.4).
 
@@ -415,7 +415,7 @@ To address the concern that results may be specific to 10-paragraph closed sets,
 | 10-para | 200 | +0.0301 | 0.000001 | [+0.0186, +0.0415] | 0.366 |
 | 50-para | 200 | +0.0348 | <0.000001 | [+0.0249, +0.0447] | 0.491 |
 
-The heuristic's U@B is **invariant to candidate set size** (p=0.925, Δ=+0.000032 for 10-para vs 50-para degradation test). Cohen's d for the heuristic-vs-ensemble comparison actually *increases* from 0.37 to 0.49 in the harder open-domain setting, as the ensemble degrades more than the heuristic under distractor dilution. The structural stopping rule is robust: it finds sufficient evidence early and stops, regardless of how many distractors surround the gold paragraphs.
+The heuristic's U@B is **robust to candidate set size** (p=0.925, Δ=+0.000032 for 10-para vs 50-para degradation test). Cohen's d for the heuristic-vs-ensemble comparison actually *increases* from 0.37 to 0.49 in the harder open-domain setting, as the ensemble degrades more than the heuristic under distractor dilution. The structural stopping rule is robust: it finds sufficient evidence early and stops, regardless of how many distractors surround the gold paragraphs.
 
 ## 5.9 Generalization: Reasoning-Intensive Retrieval (BRIGHT)
 

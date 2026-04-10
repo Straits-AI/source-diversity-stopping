@@ -142,7 +142,7 @@ To address the concern that results may be specific to 10-paragraph closed sets,
 | 10-para | 200 | +0.0301 | 0.000001 | [+0.0186, +0.0415] | 0.366 |
 | 50-para | 200 | +0.0348 | <0.000001 | [+0.0249, +0.0447] | 0.491 |
 
-The heuristic's U@B is **invariant to candidate set size** (p=0.925, Δ=+0.000032 for 10-para vs 50-para degradation test). Cohen's d for the heuristic-vs-ensemble comparison actually *increases* from 0.37 to 0.49 in the harder open-domain setting, as the ensemble degrades more than the heuristic under distractor dilution. The structural stopping rule is robust: it finds sufficient evidence early and stops, regardless of how many distractors surround the gold paragraphs.
+The heuristic's U@B is **robust to candidate set size** (p=0.925, Δ=+0.000032 for 10-para vs 50-para degradation test). Cohen's d for the heuristic-vs-ensemble comparison actually *increases* from 0.37 to 0.49 in the harder open-domain setting, as the ensemble degrades more than the heuristic under distractor dilution. The structural stopping rule is robust: it finds sufficient evidence early and stops, regardless of how many distractors surround the gold paragraphs.
 
 ## 5.9 Generalization: Reasoning-Intensive Retrieval (BRIGHT)
 
