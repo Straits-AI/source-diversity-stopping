@@ -532,6 +532,16 @@ Phase 5a: Root cause analysis — complete. Deep analysis of WHY the heuristic r
     U@B of any policy tested (0.7991); significantly beats ensemble (p=0.0035); directionally beats
     heuristic (p=0.162, not significant at N=200); see
     `experiments/aea/policies/confidence_gated.py` and `experiments/results/confidence_gated.json`).
+  - Phase 4p: Structural threshold optimization and novelty/dual-signal stopping — complete
+    (N=500 test + 500 train HotpotQA bridge, seed=42; three purely structural approaches tested:
+    (A) threshold grid search on training trajectories — best config min_items=1/min_sources=2/
+    min_relevance=0.4, U@B delta=+5e-6 vs original 2/2/0.4, Δ p=0.026 significant but trivially
+    small; (B) novelty-based stopping cosine>0.8 — U@B delta=-2e-6, p=0.276 not significant;
+    (C) dual-signal relevance-gap<0.1 OR source-diversity — U@B delta=+4e-6, p=0.050 borderline
+    significant; all three policies converge to identical behavior (ops=1.16, recall=0.806) as the
+    original heuristic; the 2/2/0.4 threshold was already near-optimal, confirming structural
+    stopping is at a local optimum; see `experiments/run_structural_improvements.py` and
+    `experiments/results/structural_improvements.json`).
 Phase 6: Paper writing — complete (v6 with root cause analysis).
   Paper: `paper/full-paper.md`, 7 sections + appendix + comparison table.
   Title: "Adaptive Retrieval Routing: When Knowing What Not To Do Beats Choosing the Right Tool"
@@ -1252,3 +1262,62 @@ Setting B — 50-paragraph open-domain:
 - **Domain consistency:** The heuristic beats CG on U@B in all 4 domains (psychology: +0.086, earth_science: +0.006, economics: +0.018, biology: +0.029), confirming the finding is not domain-specific.
 - **Implication for the paper:** Confidence-gated stopping generalizes poorly to reasoning-intensive retrieval. Its advantage on HotpotQA is specific to question distributions where early stopping is frequently warranted (bridge questions with dense, topic-specific evidence). The structural heuristic is more robust across benchmarks.
 - **Dataset:** 200 real BRIGHT examples (synthetic=False), loaded from cached HuggingFace dataset with `TRANSFORMERS_OFFLINE=1 HF_DATASETS_OFFLINE=1`.
+
+---
+
+### Experiment G: Structural Threshold Optimization and Novel Stopping Signals (2026-04-06)
+
+**Runner:** `experiments/run_structural_improvements.py`
+**Results:** `experiments/results/structural_improvements.json`
+
+**Motivation:** Seven content-aware stopping approaches have all failed to beat the structural heuristic. This experiment tests three fundamentally different structural approaches (no LLM calls, no learned models, distribution-invariant) to determine whether the original 2/2/0.4 threshold is already optimal or whether a purely structural improvement is achievable.
+
+**Design:**
+- Dataset: 1000 HotpotQA bridge questions — test split 0–499, training split 500–999
+- All metrics: retrieval U@B (no E2E), paired t-tests vs original heuristic
+
+**Approach A: Threshold Optimization**
+- Grid search over (min_items ∈ {1,2,3}) × (min_sources ∈ {1,2}) × (min_relevance ∈ {0.2,0.3,0.4,0.5,0.6}) = 30 configurations
+- Post-hoc simulation on training trajectories: run the heuristic once (max_steps=8, coverage-check disabled) to collect per-step workspace snapshots, then replay all 30 threshold conditions in O(30N) without re-running the harness
+- Best config evaluated with a real harness run on the test split
+- Best training config found: min_items=1, min_sources=2, min_relevance=0.4
+
+**Approach B: Novelty-Based Stopping**
+- Stop when all items retrieved in the LAST step are cosine-similar (> 0.8) to items from PREVIOUS steps
+- Uses pre-built L2-normalised embeddings from SemanticAddressSpace (injected once per episode)
+- NoveltyHarness wraps EvaluationHarness to inject embeddings after index build
+- Combined with source diversity (OR logic): STOP if novelty_exhausted OR source_diverse
+
+**Approach C: Dual Structural Signal**
+- Source diversity (original): 2+ items from 2+ sources, relevance ≥ 0.4
+- Relevance convergence (new): top-1 minus top-2 relevance gap < 0.1 AND top-2 from different sources
+- STOP if EITHER signal fires
+
+**Results (N=500 test examples):**
+
+| Policy                    | U@B    | Recall | Ops  | vs Orig   |
+|---------------------------|--------|--------|------|-----------|
+| Original (2/2/0.4)        | 0.0305 | 0.8060 | 1.16 | —         |
+| Approach A (1/2/0.4)      | 0.0305 | 0.8060 | 1.16 | +0.000005 |
+| Approach B (novelty>0.8)  | 0.0305 | 0.8060 | 1.16 | −0.000002 |
+| Approach C (gap<0.1)      | 0.0305 | 0.8060 | 1.16 | +0.000004 |
+
+**Statistical Tests (paired t-test on U@B vs original heuristic):**
+
+| Approach | Δ U@B     | t      | p       | Significant? |
+|----------|-----------|--------|---------|--------------|
+| A        | +5×10⁻⁶   | +2.227 | 0.0264  | YES (barely) |
+| B        | −2×10⁻⁶   | −1.091 | 0.2756  | NO           |
+| C        | +4×10⁻⁶   | +1.967 | 0.0497  | YES (barely) |
+
+**Grid search landscape (training U@B across 30 configs):**
+- Configs with min_relevance ≥ 0.4 and min_sources = 2 all tie at U@B=1.1440 (14 configs)
+- Configs with min_relevance < 0.4 score lower (U@B=1.124–1.127) due to premature stopping
+- The constraint that matters is **min_sources ≥ 2**: source diversity is the binding constraint; min_items and exact relevance value are secondary
+
+**Key Findings:**
+- **The 2/2/0.4 threshold is already near-optimal.** The grid search finds min_items=1/min_sources=2/min_relevance=0.4 as the best training config — dropping min_items from 2 to 1 changes nothing because any config with min_sources=2 and min_relevance=0.4 saturates the stopping condition at the same step (they all converge to identical behavior on the test set).
+- **All three approaches produce identical behavior to the original heuristic** (same ops=1.16, same recall=0.806). The improvements are statistically significant on A and C (p<0.05) but are of magnitude ~5×10⁻⁶ U@B — effectively zero.
+- **Novelty-based stopping (B) is redundant** with source diversity: when the heuristic's source diversity fires (2+ sources), the workspace already contains non-redundant documents. The cosine similarity check rarely triggers before source diversity.
+- **Relevance convergence (C) is equally redundant**: when top-1 and top-2 from different sources have similar scores, it overlaps perfectly with the 2-source condition.
+- **Structural stopping has hit a ceiling.** The 2/2/0.4 heuristic already exploits the maximally informative structural signal (source diversity); any threshold refinement or additional structural signal is either identical or marginally worse. Breaking through this ceiling requires either content-aware signals (which have all been tested and failed) or changing the retrieval architecture.

@@ -1,0 +1,334 @@
+{
+  "experiment": "structural_improvements",
+  "seed": 42,
+  "n_test": 500,
+  "n_train": 500,
+  "approach_a": {
+    "description": "Threshold optimization (post-hoc grid search on train trajectories)",
+    "grid_search_space": {
+      "min_items": [
+        1,
+        2,
+        3
+      ],
+      "min_sources": [
+        1,
+        2
+      ],
+      "min_relevance": [
+        0.2,
+        0.3,
+        0.4,
+        0.5,
+        0.6
+      ]
+    },
+    "best_config": {
+      "min_items": 1,
+      "min_sources": 2,
+      "min_relevance": 0.4
+    },
+    "grid_results": [
+      {
+        "min_items": 1,
+        "min_sources": 1,
+        "min_relevance": 0.2,
+        "utility_at_budget": 1.124044,
+        "support_recall": 0.794
+      },
+      {
+        "min_items": 1,
+        "min_sources": 1,
+        "min_relevance": 0.3,
+        "utility_at_budget": 1.124044,
+        "support_recall": 0.794
+      },
+      {
+        "min_items": 1,
+        "min_sources": 1,
+        "min_relevance": 0.4,
+        "utility_at_budget": 1.1289207,
+        "support_recall": 0.797
+      },
+      {
+        "min_items": 1,
+        "min_sources": 1,
+        "min_relevance": 0.5,
+        "utility_at_budget": 1.1351618,
+        "support_recall": 0.801
+      },
+      {
+        "min_items": 1,
+        "min_sources": 1,
+        "min_relevance": 0.6,
+        "utility_at_budget": 1.1380862999999999,
+        "support_recall": 0.803
+      },
+      {
+        "min_items": 1,
+        "min_sources": 2,
+        "min_relevance": 0.2,
+        "utility_at_budget": 1.1256973000000001,
+        "support_recall": 0.795
+      },
+      {
+        "min_items": 1,
+        "min_sources": 2,
+        "min_relevance": 0.3,
+        "utility_at_budget": 1.1269527000000001,
+        "support_recall": 0.796
+      },
+      {
+        "min_items": 1,
+        "min_sources": 2,
+        "min_relevance": 0.4,
+        "utility_at_budget": 1.14401025,
+        "support_recall": 0.807
+      },
+      {
+        "min_items": 1,
+        "min_sources": 2,
+        "min_relevance": 0.5,
+        "utility_at_budget": 1.14401025,
+        "support_recall": 0.807
+      },
+      {
+        "min_items": 1,
+        "min_sources": 2,
+        "min_relevance": 0.6,
+        "utility_at_budget": 1.14401025,
+        "support_recall": 0.807
+      },
+      {
+        "min_items": 2,
+        "min_sources": 1,
+        "min_relevance": 0.2,
+        "utility_at_budget": 1.1256973000000001,
+        "support_recall": 0.795
+      },
+      {
+        "min_items": 2,
+        "min_sources": 1,
+        "min_relevance": 0.3,
+        "utility_at_budget": 1.1269527000000001,
+        "support_recall": 0.796
+      },
+      {
+        "min_items": 2,
+        "min_sources": 1,
+        "min_relevance": 0.4,
+        "utility_at_budget": 1.14401025,
+        "support_recall": 0.807
+      },
+      {
+        "min_items": 2,
+        "min_sources": 1,
+        "min_relevance": 0.5,
+        "utility_at_budget": 1.14401025,
+        "support_recall": 0.807
+      },
+      {
+        "min_items": 2,
+        "min_sources": 1,
+        "min_relevance": 0.6,
+        "utility_at_budget": 1.14401025,
+        "support_recall": 0.807
+      },
+      {
+        "min_items": 2,
+        "min_sources": 2,
+        "min_relevance": 0.2,
+        "utility_at_budget": 1.1256973000000001,
+        "support_recall": 0.795
+      },
+      {
+        "min_items": 2,
+        "min_sources": 2,
+        "min_relevance": 0.3,
+        "utility_at_budget": 1.1269527000000001,
+        "support_recall": 0.796
+      },
+      {
+        "min_items": 2,
+        "min_sources": 2,
+        "min_relevance": 0.4,
+        "utility_at_budget": 1.14401025,
+        "support_recall": 0.807
+      },
+      {
+        "min_items": 2,
+        "min_sources": 2,
+        "min_relevance": 0.5,
+        "utility_at_budget": 1.14401025,
+        "support_recall": 0.807
+      },
+      {
+        "min_items": 2,
+        "min_sources": 2,
+        "min_relevance": 0.6,
+        "utility_at_budget": 1.14401025,
+        "support_recall": 0.807
+      },
+      {
+        "min_items": 3,
+        "min_sources": 1,
+        "min_relevance": 0.2,
+        "utility_at_budget": 1.12540605,
+        "support_recall": 0.795
+      },
+      {
+        "min_items": 3,
+        "min_sources": 1,
+        "min_relevance": 0.3,
+        "utility_at_budget": 1.1314672500000003,
+        "support_recall": 0.799
+      },
+      {
+        "min_items": 3,
+        "min_sources": 1,
+        "min_relevance": 0.4,
+        "utility_at_budget": 1.14401025,
+        "support_recall": 0.807
+      },
+      {
+        "min_items": 3,
+        "min_sources": 1,
+        "min_relevance": 0.5,
+        "utility_at_budget": 1.14401025,
+        "support_recall": 0.807
+      },
+      {
+        "min_items": 3,
+        "min_sources": 1,
+        "min_relevance": 0.6,
+        "utility_at_budget": 1.14401025,
+        "support_recall": 0.807
+      },
+      {
+        "min_items": 3,
+        "min_sources": 2,
+        "min_relevance": 0.2,
+        "utility_at_budget": 1.12540605,
+        "support_recall": 0.795
+      },
+      {
+        "min_items": 3,
+        "min_sources": 2,
+        "min_relevance": 0.3,
+        "utility_at_budget": 1.1314672500000003,
+        "support_recall": 0.799
+      },
+      {
+        "min_items": 3,
+        "min_sources": 2,
+        "min_relevance": 0.4,
+        "utility_at_budget": 1.14401025,
+        "support_recall": 0.807
+      },
+      {
+        "min_items": 3,
+        "min_sources": 2,
+        "min_relevance": 0.5,
+        "utility_at_budget": 1.14401025,
+        "support_recall": 0.807
+      },
+      {
+        "min_items": 3,
+        "min_sources": 2,
+        "min_relevance": 0.6,
+        "utility_at_budget": 1.14401025,
+        "support_recall": 0.807
+      }
+    ],
+    "test_aggregated": {
+      "exact_match": 0.0,
+      "f1": 0.038789333699142246,
+      "support_recall": 0.806,
+      "support_precision": 0.3118039682539683,
+      "bundle_coverage": 0.806,
+      "utility_at_budget": 0.03051443791848532,
+      "steps_taken": 1.16,
+      "tokens_used": 752.906,
+      "latency_ms_total": 17.075715661165304,
+      "operations_used": 1.16
+    }
+  },
+  "approach_b": {
+    "description": "Novelty-based stopping (cosine > threshold \u2192 redundant)",
+    "novelty_threshold": 0.8,
+    "test_aggregated": {
+      "exact_match": 0.0,
+      "f1": 0.038789333699142246,
+      "support_recall": 0.806,
+      "support_precision": 0.3118039682539683,
+      "bundle_coverage": 0.806,
+      "utility_at_budget": 0.030507313571076396,
+      "steps_taken": 1.16,
+      "tokens_used": 752.906,
+      "latency_ms_total": 19.213019883842207,
+      "operations_used": 1.16
+    }
+  },
+  "approach_c": {
+    "description": "Dual structural signal (source diversity OR relevance convergence)",
+    "gap_threshold": 0.1,
+    "test_aggregated": {
+      "exact_match": 0.0,
+      "f1": 0.038789333699142246,
+      "support_recall": 0.806,
+      "support_precision": 0.3118039682539683,
+      "bundle_coverage": 0.806,
+      "utility_at_budget": 0.030513735772894415,
+      "steps_taken": 1.16,
+      "tokens_used": 752.906,
+      "latency_ms_total": 17.28635933843907,
+      "operations_used": 1.16
+    }
+  },
+  "original_heuristic": {
+    "description": "Original AEA heuristic (min_items=2, min_sources=2, min_relevance=0.4)",
+    "test_aggregated": {
+      "exact_match": 0.0,
+      "f1": 0.038789333699142246,
+      "support_recall": 0.806,
+      "support_precision": 0.3118039682539683,
+      "bundle_coverage": 0.806,
+      "utility_at_budget": 0.03050962685691079,
+      "steps_taken": 1.16,
+      "tokens_used": 752.906,
+      "latency_ms_total": 18.519034133525565,
+      "operations_used": 1.16
+    }
+  },
+  "statistical_tests": [
+    {
+      "label": "Approach A (optimized thresholds)",
+      "delta_ub": 5e-06,
+      "t_stat": 2.2272,
+      "p_value": 0.026381,
+      "significant": true
+    },
+    {
+      "label": "Approach B (novelty stopping)",
+      "delta_ub": -2e-06,
+      "t_stat": -1.0914,
+      "p_value": 0.275615,
+      "significant": false
+    },
+    {
+      "label": "Approach C (dual signal)",
+      "delta_ub": 4e-06,
+      "t_stat": 1.9675,
+      "p_value": 0.04968,
+      "significant": true
+    }
+  ],
+  "summary": {
+    "original_ub": 0.03050962685691079,
+    "approach_a_ub": 0.03051443791848532,
+    "approach_b_ub": 0.030507313571076396,
+    "approach_c_ub": 0.030513735772894415,
+    "best_approach": "approach_a",
+    "any_significant_improvement": true
+  }
+}
