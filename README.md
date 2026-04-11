@@ -1154,3 +1154,101 @@ Setting B — 50-paragraph open-domain:
 - **Architecture:** Exactly 1 LLM judgment call per episode; the draft answer from the confidence call is injected into history and picked up by `harness._derive_answer`. Final answer generation uses the workspace passages as evidence (confidence check answer is a draft, not the scored answer).
 
 **Conclusion:** Confidence-gated stopping is the best content-aware stopping approach tested so far. It beats the structural heuristic directionally on E2E U@B and beats the ensemble significantly. The single-call LLM gate is a practical approach: cheap enough to deploy (1 extra API call per query), and effective at identifying questions where the first retrieval step is already sufficient.
+
+---
+
+### Experiment E: Confidence-Gated Stopping — N=500 HotpotQA (2026-04-06)
+
+**Policy:** `experiments/aea/policies/confidence_gated.py` — `ConfidenceGatedPolicy`
+**Runner:** `experiments/run_confidence_gated_n500.py`
+**Results:** `experiments/results/confidence_gated_n500.json`
+**Checkpoint:** `experiments/results/confidence_gated_n500_retrieval_checkpoint.json`
+
+**Motivation:** Reviewer concern: "N=200 is underpowered; the confidence-gated result may not replicate at larger scale." This experiment replicates Experiment D on 500 HotpotQA bridge questions (eval split 0-499), with full E2E answer generation for both pi_aea_heuristic and pi_confidence_gated.
+
+**Design:**
+- Dataset: 500 HotpotQA bridge questions (eval split 0-499)
+- Policies compared: `pi_aea_heuristic`, `pi_confidence_gated`
+- Reference (retrieval-only): ensemble results from prior e2e_n500_clean.json (not re-run)
+- Full E2E answer generation: gpt-oss-120b via OpenRouter, 0.5s delay per call
+- Adjusted U@B for confidence-gated: `F1 * (1 + 0.5 * Recall) - 0.3 * ((ops + 0.23) / 3.0)` (adds 0.23 LLM cost offset to ops)
+- Checkpoint mechanism: retrieval results saved after Phase 2 to allow retry of Phase 3 (LLM generation) without re-running 62 minutes of confidence checks
+
+**Retrieval Results (N=500):**
+
+| Policy              | SupportRecall | AvgOps | Retrieval U@Budget |
+|---------------------|:-------------:|:------:|:------------------:|
+| pi_aea_heuristic    |    0.8060     |  1.16  |      0.0305        |
+| pi_confidence_gated |    0.8270     |  1.20  |      0.3793        |
+
+**E2E Results (N=500, gpt-oss-120b):**
+
+| Policy                       |   EM   |   F1   | Recall | Ops  | E2E U@B | Adj E2E U@B |
+|------------------------------|:------:|:------:|:------:|:----:|:-------:|:-----------:|
+| pi_aea_heuristic             | 0.4500 | 0.6300 | 0.8060 | 1.16 | 0.7863  |     —       |
+| pi_confidence_gated          | 0.4460 | 0.6319 | 0.8270 | 1.20 | 0.7871  |   0.7641    |
+
+**Statistical Tests (paired t-test on E2E U@B):**
+
+| Comparison                                    |     Δ     |    p    |     d     | Significant? |
+|-----------------------------------------------|:---------:|:-------:|:---------:|:------------:|
+| ConfGated vs AEAHeuristic (standard U@B)      | +0.0008   | 0.9701  | +0.002    |     NO       |
+| ConfGated (adj +0.23 LLM) vs AEAHeuristic     | −0.0222   | 0.2926  | −0.047    |     NO       |
+
+**Key Findings:**
+- **Both policies perform near-identically** on standard E2E U@B (0.7871 vs 0.7863, Δ=+0.0008, p=0.970). The N=200 directional advantage for confidence-gated does not replicate at N=500 with statistical significance.
+- **After LLM cost adjustment**, confidence-gated falls slightly below the heuristic (adjusted U@B 0.7641 vs 0.7863, Δ=−0.0222, p=0.293) — not significant but directionally unfavorable when accounting for the extra LLM call per episode.
+- **Both policies substantially beat the prior ensemble reference** (F1=0.6814, U@B=0.7068), confirming that adaptive stopping at N=500 adds real value over always-retrieve-all.
+- **Recall is comparable** (0.827 CG vs 0.806 AEA) — confidence-gated's lexical fallback retrieves marginally more evidence, but the F1 improvement is negligible at this scale.
+- **N=500 confirms the null hypothesis**: pi_confidence_gated ≈ pi_aea_heuristic on E2E quality. The N=200 result was directionally positive but underpowered.
+- **Cost:** 1000 LLM API calls, 873,837 tokens, 0 errors. Retrieval phase: ~62 minutes (500 confidence checks × ~7.5s average API latency). Generation phase: ~20 minutes.
+
+---
+
+### Experiment F: Confidence-Gated Stopping — BRIGHT Benchmark (2026-04-06)
+
+**Policy:** `experiments/aea/policies/confidence_gated.py` — `ConfidenceGatedPolicy`
+**Runner:** `experiments/run_confidence_gated_bright.py`
+**Results:** `experiments/results/confidence_gated_bright.json`
+
+**Motivation:** Reviewer concern: "Results may be specific to HotpotQA bridge questions." BRIGHT is a reasoning-intensive retrieval benchmark with low lexical AND semantic overlap between queries and gold documents, requiring multi-step inference to bridge query and evidence. Key question: does confidence-gated stopping generalize to reasoning-intensive retrieval?
+
+**Design:**
+- Dataset: 200 real BRIGHT examples (from HuggingFace `xlangai/BRIGHT`, cached), 4 domains × 50 questions
+- Domains: biology, earth_science, economics, psychology
+- Policies compared: `pi_aea_heuristic`, `pi_confidence_gated`
+- Retrieval-only evaluation (no E2E answer generation — BRIGHT has no standard short-answer labels)
+- Metrics: SupportRecall, AvgOps, Utility@Budget (μ=0.3, max_ops=3)
+- Statistical tests: paired t-test on per-example U@B and support_recall
+
+**Retrieval Results (N=200, BRIGHT):**
+
+| Policy              | SupportRecall | AvgOps | U@Budget |
+|---------------------|:-------------:|:------:|:--------:|
+| pi_aea_heuristic    |    0.9083     |  1.685 |  0.1937  |
+| pi_confidence_gated |    0.9142     |  1.435 |  0.1588  |
+
+**Domain Breakdown:**
+
+| Domain       | AEA Heuristic SR / U@B | ConfGated SR / U@B | n  |
+|--------------|:----------------------:|:------------------:|:--:|
+| psychology   |   0.8833 / 0.2237      |  0.8700 / 0.1378   | 50 |
+| earth_science|   0.8900 / 0.1395      |  0.8967 / 0.1330   | 50 |
+| economics    |   0.9000 / 0.1995      |  0.9200 / 0.1814   | 50 |
+| biology      |   0.9600 / 0.2119      |  0.9700 / 0.1829   | 50 |
+
+**Statistical Tests (paired t-test, N=200):**
+
+| Comparison                          |     Δ     |    p    |     d     | Significant? |
+|-------------------------------------|:---------:|:-------:|:---------:|:------------:|
+| ConfGated vs AEAHeuristic (U@B)     | −0.0348   | 0.0064  | −0.195    |     YES      |
+| ConfGated vs AEAHeuristic (recall)  | +0.0058   | 0.5511  | +0.042    |     NO       |
+
+**Key Findings:**
+- **Confidence-gated is significantly WORSE than the heuristic on U@Budget** (Δ=−0.0348, p=0.006, d=−0.195) on BRIGHT. This is a significant negative result.
+- **Recall is nearly identical** (0.914 CG vs 0.908 AEA, Δ=+0.006, p=0.551, not significant) — both policies retrieve comparable evidence, but the U@B penalty from the LLM call overhead causes the gap.
+- **Why it fails on BRIGHT:** BRIGHT queries require multi-step reasoning to connect to gold documents; they have low lexical and semantic overlap by design. The LLM confidence check after one semantic retrieval step correctly identifies insufficient evidence and routes to the lexical fallback — but this happens so frequently that ops costs approach those of the heuristic while the LLM call overhead adds to the effective budget consumption.
+- **The LLM overhead is the key variable.** On HotpotQA (N=200), 77% of questions triggered early stopping (confident after 1 op). On BRIGHT, the harder queries mean fewer early stops — the LLM calls cost (in ops budget terms, via the +0.23 adjustment) without providing a recall benefit.
+- **Domain consistency:** The heuristic beats CG on U@B in all 4 domains (psychology: +0.086, earth_science: +0.006, economics: +0.018, biology: +0.029), confirming the finding is not domain-specific.
+- **Implication for the paper:** Confidence-gated stopping generalizes poorly to reasoning-intensive retrieval. Its advantage on HotpotQA is specific to question distributions where early stopping is frequently warranted (bridge questions with dense, topic-specific evidence). The structural heuristic is more robust across benchmarks.
+- **Dataset:** 200 real BRIGHT examples (synthetic=False), loaded from cached HuggingFace dataset with `TRANSFORMERS_OFFLINE=1 HF_DATASETS_OFFLINE=1`.
