@@ -59,17 +59,31 @@ where η = 0.5 weights evidence precision and μ = 0.3 penalizes cost. Both coef
 
 This metric rewards high-recall, high-precision retrieval while penalizing unnecessary operations. A policy that retrieves everything but wastes budget is penalized; a policy that retrieves nothing pays no cost but scores zero on recall. The optimal strategy under this metric is to retrieve exactly what is needed and stop.
 
-## 3.5 Learned Stopping Classifier
+## 3.5 Confidence-Gated Stopping (Proposed Method)
 
-The heuristic stopping rule (Condition 1) uses a hand-tuned coverage threshold. We replace this with a **learned classifier** trained on retrieval trajectory data.
+The six content-aware approaches tested in Section 5.4 all fail because they try to assess **evidence quality** — whether the retrieved passages are sufficient to answer the question. This is fundamentally a set function over passage bundles: the sufficiency of {p₁, p₂, ..., pₖ} depends on their joint content in ways that cannot be decomposed from individual scores.
 
-**Training data collection.** We run the ensemble policy (which always retrieves from all substrates) on 500 HotpotQA bridge questions separate from the evaluation set. At each step t, we record 9 workspace features: n_workspace_items, max_relevance, mean_relevance, min_relevance, n_unique_sources, relevance_diversity, step_number, new_items_added, and max_relevance_improvement. The oracle label is: should the policy stop at step t to maximize Utility@Budget? This produces ~4,200 step-level training examples.
+We propose a simpler question: instead of asking "is my evidence good enough?", ask **"can I answer this?"** The LLM — which will ultimately generate the answer — is the most direct judge of its own readiness.
 
-**Classifier.** We train a gradient boosted tree (sklearn GradientBoostingClassifier) on 80% of the data and evaluate on 20%. The classifier achieves 93.3% accuracy and 71.7% F1 on the held-out test set.
+**Confidence-gated stopping** works as follows:
 
-**Key finding: the dominant stopping signal.** Feature importance analysis reveals that **max_relevance_improvement** — the change in the best evidence quality from the previous step — has importance 0.55, far exceeding all other features. The classifier has learned that **diminishing marginal returns in evidence quality is the optimal stopping signal**: when the last retrieval step didn't materially improve the best evidence, stop. This is interpretable, actionable, and validates the stopping thesis from data rather than intuition.
+1. **Step 0:** Semantic search (same as all policies).
+2. **Step 1:** Present the workspace evidence to the LLM with the prompt:
+   ```
+   Evidence: {workspace passages}
+   Question: {question}
+   Can you answer this question from the evidence above?
+   If YES: respond with just the answer (1-5 words).
+   If NO: respond with exactly "NEED_MORE".
+   ```
+3. **If the LLM responds with an answer** (confident) → STOP. (77% of questions in our evaluation.)
+4. **If the LLM responds "NEED_MORE"** (uncertain) → execute one lexical search, then STOP. (23% of questions.)
 
-**Deployment.** The LearnedStoppingPolicy loads the trained classifier and uses it in place of the heuristic's coverage check. At each step after the initial semantic search, it extracts the 9 features from the current workspace state and queries the classifier. If the classifier predicts STOP (probability ≥ 0.35), the policy stops; otherwise, it escalates to lexical search.
+**Total cost:** 1–2 retrieval operations + exactly 1 LLM call. This matches the structural heuristic's cost efficiency (1.23 vs 1.16 ops) while adding content-aware judgment.
+
+**Why this succeeds where others fail:** The confidence-gated approach sidesteps the set function problem entirely. It does not try to assess evidence quality from outside — it asks the answerer to assess its own state from inside. The LLM's response encodes an implicit bundle-level sufficiency judgment: by attempting to answer, it determines whether the evidence supports a confident response without explicitly modeling passage interactions.
+
+**Relation to the structural heuristic:** Confidence-gated stopping can be viewed as an augmentation of the structural heuristic rather than a replacement. On easy questions (77%), both policies stop after one step — the LLM's confidence aligns with the structural signal. On the remaining 23%, the LLM identifies cases where the structural signal would incorrectly indicate sufficiency (evidence from multiple sources but not actually answering the question) and escalates.
 
 ## 3.6 Connection to Formal Framework
 
