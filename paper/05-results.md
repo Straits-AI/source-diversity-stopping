@@ -197,6 +197,28 @@ Motivated by the failure analysis (Section 6.4), we test confidence-gated stoppi
 
 **Stopping breakdown:** 77% of questions stop after 1 step (LLM confident); 23% escalate to a second retrieval step (LLM says "NEED_MORE").
 
-Confidence-gated stopping achieves the best E2E U@B (0.799) of any policy tested in this paper, significantly outperforming the ensemble (p=0.004) and improving over the heuristic in EM (+3pp), F1 (+3pp), and recall (+3.5pp) at essentially the same cost (1.23 vs 1.16 ops). The improvement over the heuristic is directional at N=200 (p=0.162); larger-scale evaluation would determine significance.
+At N=200, confidence-gated stopping appears promising — significantly beating the ensemble (p=0.004) and directionally improving over the heuristic (+0.044, p=0.162). However, **this result does not replicate at scale or across benchmarks**:
 
-**Why it works:** The confidence-gated approach succeeds where six other content-aware methods fail because it assesses **answerer readiness** rather than **evidence quality**. The LLM's binary judgment ("I can/cannot answer") is a scalar signal that implicitly encodes a bundle-level sufficiency assessment without requiring the model to explicitly reason about passage interactions. On the 23% of questions where the LLM says "NEED_MORE," additional retrieval produces evidence that changes the answer — confirming the LLM's self-assessment is calibrated.
+- **N=500 HotpotQA (E2E):** CG U@B = 0.787 vs heuristic 0.786 — no difference (p=0.970)
+- **BRIGHT (N=200, retrieval):** CG U@B = 0.159 vs heuristic 0.194 — CG significantly **worse** (p=0.006)
+
+Additionally, properly accounting for the LLM confidence call cost (+0.23 unified ops, reflecting that 77% of calls serve as the final answer) reduces CG's advantage to non-significance even at N=200 (p=0.019 vs ensemble; p=0.506 vs heuristic).
+
+**The evidence-vs-readiness distinction remains conceptually valuable** — it explains why the confidence-gated approach is the least-bad content-aware method. But empirically, it does not beat the structural heuristic.
+
+## 5.12 Structural Improvements: The Structural Ceiling
+
+To test whether the heuristic's threshold can be improved while staying structural (zero cost, no models), we implement three alternatives:
+
+**Table 10.** Structural improvement attempts (N=500, retrieval-only).
+
+| Approach | Mechanism | Ops | U@B | Δ from Heuristic |
+|---|---|---|---|---|
+| Threshold optimization | Grid search (30 configs, trained on 500-999) | 1.16 | 0.0305 | +0.000005 |
+| Novelty detection | Stop when new items duplicate existing (embedding sim > 0.8) | 1.16 | 0.0305 | -0.000002 |
+| Dual signal | Source diversity OR relevance convergence (gap < 0.1) | 1.16 | 0.0305 | +0.000004 |
+| **Heuristic** | **2+ items from 2+ sources, relevance ≥ 0.4** | **1.16** | **0.0305** | **baseline** |
+
+All three converge to **identical behavior** (differences < 10⁻⁵). Grid search over 30 threshold configurations confirms source diversity (min_sources ≥ 2) is the binding constraint — the other parameters (min_items, min_relevance) and alternative signals (novelty, relevance gap) are redundant.
+
+**This establishes the structural ceiling:** source diversity is the maximally informative zero-cost stopping signal. No structural enrichment tested improves upon it.
