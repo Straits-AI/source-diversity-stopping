@@ -121,13 +121,15 @@ The stopping hierarchy -- structural heuristic > content-aware stopping > learne
 
 2. **Non-deterministic LLM answers.** Answer generation via gpt-oss-120b is non-deterministic, producing slight absolute U@B variation across runs (Tables 1 and 3). Relative comparisons within each evaluation are valid.
 
-3. **Custom evaluation metric.** Utility@Budget is author-defined. The specific η and μ values determine the ranking — sensitivity analysis across parameter ranges is reported in Section 5.5.
+3. **Custom evaluation metric.** Utility@Budget is author-defined. The sensitivity analysis across μ (Section 5.5) shows the crossover at μ≈0.3; sensitivity to η has not been tested. At η=0 (no precision bonus), the ranking could change. The Pareto-optimality claim is bounded by the tested parameter range.
 
-4. **Three address spaces.** Real retrieval environments include web search, tool invocation, and structural navigation. Cost differentials across these modalities are larger, potentially amplifying the benefit of selective stopping.
+4. **Pareto-optimality is bounded.** We test ten alternatives across seven design categories, but the space of possible stopping mechanisms is unbounded. Reinforcement learning-trained stopping policies (e.g., Search-R1 or SmartRAG-style approaches applied specifically to stopping) are discussed in related work but not tested. The claim is "Pareto-optimal within tested alternatives," not universally optimal.
 
-5. **Heuristic policy.** The routing decisions are hand-designed rules. The results show what is achievable without learning; a learned policy could close the gap between routing avoidance and positive routing.
+5. **Three address spaces.** Real retrieval environments include web search, tool invocation, and structural navigation. Cost differentials across these modalities are larger, potentially amplifying the benefit of selective stopping.
 
-6. **Free-tier LLM for routing and answers.** The gpt-oss-120b model is capable but not state-of-the-art. Stronger models might shift the balance toward positive routing.
+6. **Heuristic policy.** The routing decisions are hand-designed rules. The results show what is achievable without learning; a learned policy could close the gap between routing avoidance and positive routing.
+
+7. **LLM model identity.** Answer generation uses "gpt-oss-120b" via OpenRouter, an open-weight 120B-parameter model. Results may differ with other models. The model's exact version and provider endpoint should be noted for reproducibility.
 
 ## 6.6 Future Work
 

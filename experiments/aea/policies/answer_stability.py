@@ -56,7 +56,7 @@ _DRAFT_MODEL = "openai/gpt-oss-120b"
 _API_BASE_URL = "https://openrouter.ai/api/v1"
 _API_KEY = os.environ.get(
     "OPENROUTER_API_KEY",
-    "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",
+    "REPLACE_WITH_YOUR_OPENROUTER_API_KEY",
 )
 _REQUEST_TIMEOUT = 60.0
 _CALL_DELAY = 0.5          # seconds between consecutive API calls (rate-limit guard)

@@ -2,13 +2,13 @@
 
 ## Abstract
 
-When should a multi-substrate retrieval system stop searching? We prove empirically that a one-line structural heuristic — stop when evidence has arrived from two or more independent retrieval sources — is Pareto-optimal: no tested alternative improves quality without increasing cost, and no tested alternative reduces cost without reducing quality.
+When should a multi-substrate retrieval system stop searching? We prove empirically that a one-line structural heuristic — stop when evidence has arrived from two or more independent retrieval sources — is Pareto-optimal within the space of ten tested alternatives: no tested alternative improves quality without increasing cost, and no tested alternative reduces cost without reducing quality.
 
 We establish this through ten controlled experiments spanning seven design categories. First, we show the heuristic significantly outperforms comprehensive retrieval across three benchmark families: multi-hop QA (HotpotQA, p<0.0001, N=1000), reasoning-intensive retrieval (BRIGHT, p=0.003, N=200), and diluted retrieval (p<0.0001, N=200, 5x candidate expansion). The advantage is robust across question types and grows in harder settings (Cohen's d increases from 0.38 to 0.49).
 
 We then test seven content-aware alternatives — a cross-encoder, NLI bundle checker, learned classifier, LLM decomposition, answer-stability tracker, confidence-gated stopping, and embedding router — and three structural improvements — threshold optimization, novelty detection, and dual-signal stopping. All ten fail. The seven content-aware methods fail because they assess **evidence quality** (a set function over passage bundles that current models cannot compute reliably); the three structural methods converge to identical behavior because source diversity is already the maximally informative zero-cost signal.
 
-Root cause analysis identifies two ceilings that make the heuristic Pareto-optimal: a **content-aware ceiling** (all content signals introduce more noise than information) and a **structural ceiling** (source diversity is the binding constraint; other structural signals are redundant). This connects to classical optimal stopping theory: threshold rules on low-noise observables dominate value-estimation approaches when the value function is hard to learn. The result reframes adaptive retrieval stopping from a learning problem to a signal-selection problem, and establishes source diversity as the signal of choice.
+Root cause analysis identifies two ceilings that make the heuristic Pareto-optimal within the space of ten tested alternatives: a **content-aware ceiling** (all content signals introduce more noise than information) and a **structural ceiling** (source diversity is the binding constraint; other structural signals are redundant). This connects to classical optimal stopping theory: threshold rules on low-noise observables dominate value-estimation approaches when the value function is hard to learn. The result reframes adaptive retrieval stopping from a learning problem to a signal-selection problem, and establishes source diversity as the signal of choice.
 # 1 Introduction
 
 When should a multi-substrate retrieval system stop searching? This question is fundamental to cost-efficient retrieval-augmented generation, yet surprisingly underexplored. Existing adaptive retrieval systems focus on *what* to retrieve (Self-RAG [Asai et al., 2024], FLARE [Jiang et al., 2023]) or *how* to route queries (Adaptive-RAG [Jeong et al., 2024], SmartRAG [Gao et al., 2025]), but the stopping decision — whether to continue searching or return with current evidence — receives little systematic attention.
@@ -144,11 +144,11 @@ where η = 0.5 weights evidence precision and μ = 0.3 penalizes cost. Both coef
 
 This metric rewards high-recall, high-precision retrieval while penalizing unnecessary operations. A policy that retrieves everything but wastes budget is penalized; a policy that retrieves nothing pays no cost but scores zero on recall. The optimal strategy under this metric is to retrieve exactly what is needed and stop.
 
-## 3.5 Confidence-Gated Stopping (Proposed Method)
+## 3.5 Confidence-Gated Stopping (Testing the Evidence-vs-Readiness Hypothesis)
 
-The six content-aware approaches tested in Section 5.4 all fail because they try to assess **evidence quality** — whether the retrieved passages are sufficient to answer the question. This is fundamentally a set function over passage bundles: the sufficiency of {p₁, p₂, ..., pₖ} depends on their joint content in ways that cannot be decomposed from individual scores.
+The content-aware approaches tested in Section 5.4 all fail because they try to assess **evidence quality** — whether the retrieved passages are sufficient to answer the question. This is fundamentally a set function over passage bundles: the sufficiency of {p₁, p₂, ..., pₖ} depends on their joint content in ways that cannot be decomposed from individual scores.
 
-We propose a simpler question: instead of asking "is my evidence good enough?", ask **"can I answer this?"** The LLM — which will ultimately generate the answer — is the most direct judge of its own readiness.
+To test whether this bottleneck can be bypassed, we implement a simpler question: instead of asking "is my evidence good enough?", ask **"can I answer this?"** The LLM — which will ultimately generate the answer — is the most direct judge of its own readiness.
 
 **Confidence-gated stopping** works as follows:
 
@@ -636,13 +636,15 @@ The stopping hierarchy -- structural heuristic > content-aware stopping > learne
 
 2. **Non-deterministic LLM answers.** Answer generation via gpt-oss-120b is non-deterministic, producing slight absolute U@B variation across runs (Tables 1 and 3). Relative comparisons within each evaluation are valid.
 
-3. **Custom evaluation metric.** Utility@Budget is author-defined. The specific η and μ values determine the ranking — sensitivity analysis across parameter ranges is reported in Section 5.5.
+3. **Custom evaluation metric.** Utility@Budget is author-defined. The sensitivity analysis across μ (Section 5.5) shows the crossover at μ≈0.3; sensitivity to η has not been tested. At η=0 (no precision bonus), the ranking could change. The Pareto-optimality claim is bounded by the tested parameter range.
 
-4. **Three address spaces.** Real retrieval environments include web search, tool invocation, and structural navigation. Cost differentials across these modalities are larger, potentially amplifying the benefit of selective stopping.
+4. **Pareto-optimality is bounded.** We test ten alternatives across seven design categories, but the space of possible stopping mechanisms is unbounded. Reinforcement learning-trained stopping policies (e.g., Search-R1 or SmartRAG-style approaches applied specifically to stopping) are discussed in related work but not tested. The claim is "Pareto-optimal within tested alternatives," not universally optimal.
 
-5. **Heuristic policy.** The routing decisions are hand-designed rules. The results show what is achievable without learning; a learned policy could close the gap between routing avoidance and positive routing.
+5. **Three address spaces.** Real retrieval environments include web search, tool invocation, and structural navigation. Cost differentials across these modalities are larger, potentially amplifying the benefit of selective stopping.
 
-6. **Free-tier LLM for routing and answers.** The gpt-oss-120b model is capable but not state-of-the-art. Stronger models might shift the balance toward positive routing.
+6. **Heuristic policy.** The routing decisions are hand-designed rules. The results show what is achievable without learning; a learned policy could close the gap between routing avoidance and positive routing.
+
+7. **LLM model identity.** Answer generation uses "gpt-oss-120b" via OpenRouter, an open-weight 120B-parameter model. Results may differ with other models. The model's exact version and provider endpoint should be noted for reproducibility.
 
 ## 6.6 Future Work
 

@@ -37,7 +37,7 @@ from scipy import stats
 os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
 
 # ── Set API key BEFORE any AEA imports (answer_generator reads key at import) ─
-_API_KEY_VALUE = "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"
+_API_KEY_VALUE = "REPLACE_WITH_YOUR_OPENROUTER_API_KEY"
 os.environ["OPENROUTER_API_KEY"] = _API_KEY_VALUE
 
 # ── Project root ──────────────────────────────────────────────────────────────
@@ -75,7 +75,7 @@ RESULTS_FILE = RESULTS_DIR / "confidence_gated_n500.json"
 # Set API key
 os.environ.setdefault(
     "OPENROUTER_API_KEY",
-    "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",
+    "REPLACE_WITH_YOUR_OPENROUTER_API_KEY",
 )
 
 POLICIES_TO_RUN = ["pi_aea_heuristic", "pi_confidence_gated"]

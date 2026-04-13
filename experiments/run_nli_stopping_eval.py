@@ -44,7 +44,7 @@ from scipy import stats  # type: ignore
 os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
 
 # Set API key before importing answer_generator (reads env var at import time)
-_OPENROUTER_KEY = "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"
+_OPENROUTER_KEY = "REPLACE_WITH_YOUR_OPENROUTER_API_KEY"
 os.environ.setdefault("OPENROUTER_API_KEY", _OPENROUTER_KEY)
 
 # Project root on sys.path

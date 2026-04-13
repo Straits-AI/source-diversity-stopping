@@ -69,7 +69,7 @@ MODEL_PATH = Path(__file__).resolve().parent / "models" / "stopping_classifier.p
 
 OPENROUTER_API_KEY = os.environ.get(
     "OPENROUTER_API_KEY",
-    "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",
+    "REPLACE_WITH_YOUR_OPENROUTER_API_KEY",
 )
 
 # Policies for E2E LLM-answer evaluation (subset to control API cost)

@@ -33,7 +33,7 @@ from typing import Optional
 import numpy as np
 
 # -- Set API key BEFORE any imports that read os.environ at module level -------
-_HARDCODED_KEY = "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"
+_HARDCODED_KEY = "REPLACE_WITH_YOUR_OPENROUTER_API_KEY"
 if not os.environ.get("OPENROUTER_API_KEY"):
     os.environ["OPENROUTER_API_KEY"] = _HARDCODED_KEY
 
@@ -68,7 +68,7 @@ RESULTS_FILE = RESULTS_DIR / "decomposition_eval_results.json"
 
 OPENROUTER_API_KEY = os.environ.get(
     "OPENROUTER_API_KEY",
-    "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",
+    "REPLACE_WITH_YOUR_OPENROUTER_API_KEY",
 )
 
 # Sensitivity analysis mu values (cost-vs-quality trade-off parameter)

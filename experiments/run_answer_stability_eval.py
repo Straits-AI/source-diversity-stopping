@@ -36,7 +36,7 @@ os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
 
 # Set API key BEFORE any AEA module imports — answer_generator.py reads the
 # key at import time via os.environ.get(), so it must be set first.
-_OPENROUTER_KEY = "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"
+_OPENROUTER_KEY = "REPLACE_WITH_YOUR_OPENROUTER_API_KEY"
 os.environ.setdefault("OPENROUTER_API_KEY", _OPENROUTER_KEY)
 
 # Make sure project root is on sys.path when run directly

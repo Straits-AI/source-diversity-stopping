@@ -70,7 +70,7 @@ RESULTS_FILE = RESULTS_DIR / "confidence_gated_bright.json"
 # Set API key
 os.environ.setdefault(
     "OPENROUTER_API_KEY",
-    "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",
+    "REPLACE_WITH_YOUR_OPENROUTER_API_KEY",
 )
 
 POLICIES_TO_RUN = ["pi_aea_heuristic", "pi_confidence_gated"]

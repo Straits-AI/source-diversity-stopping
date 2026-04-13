@@ -59,11 +59,11 @@ where η = 0.5 weights evidence precision and μ = 0.3 penalizes cost. Both coef
 
 This metric rewards high-recall, high-precision retrieval while penalizing unnecessary operations. A policy that retrieves everything but wastes budget is penalized; a policy that retrieves nothing pays no cost but scores zero on recall. The optimal strategy under this metric is to retrieve exactly what is needed and stop.
 
-## 3.5 Confidence-Gated Stopping (Proposed Method)
+## 3.5 Confidence-Gated Stopping (Testing the Evidence-vs-Readiness Hypothesis)
 
-The six content-aware approaches tested in Section 5.4 all fail because they try to assess **evidence quality** — whether the retrieved passages are sufficient to answer the question. This is fundamentally a set function over passage bundles: the sufficiency of {p₁, p₂, ..., pₖ} depends on their joint content in ways that cannot be decomposed from individual scores.
+The content-aware approaches tested in Section 5.4 all fail because they try to assess **evidence quality** — whether the retrieved passages are sufficient to answer the question. This is fundamentally a set function over passage bundles: the sufficiency of {p₁, p₂, ..., pₖ} depends on their joint content in ways that cannot be decomposed from individual scores.
 
-We propose a simpler question: instead of asking "is my evidence good enough?", ask **"can I answer this?"** The LLM — which will ultimately generate the answer — is the most direct judge of its own readiness.
+To test whether this bottleneck can be bypassed, we implement a simpler question: instead of asking "is my evidence good enough?", ask **"can I answer this?"** The LLM — which will ultimately generate the answer — is the most direct judge of its own readiness.
 
 **Confidence-gated stopping** works as follows:
 
