@@ -47,6 +47,24 @@ To verify that results are not specific to the closed 10-paragraph setting, we e
 
 We also constructed a synthetic heterogeneous benchmark (100 questions, 6 task types) for development purposes; see Appendix for details.
 
+### Structural Navigation Benchmark (this work, Appendix B)
+
+To test whether the structural gap identified in the "agentic attention" vision (title-hierarchy / filesystem-browsing) changes the stopping picture, we constructed a structure-dependent benchmark of 100 questions (seed=42, no API calls):
+
+- **50 discovery questions** — "Which department handles X?" where X is a functional description; the answer lies in a document whose *title* names the department but the question does not.
+- **50 extraction questions** — "What is Y's role in organisation Z?" requiring navigation to the document titled "Z" and then reading the personnel section within it.
+
+Each question has 10 context documents (2 gold, 8 distractors with generic titles). Titles are informative and filesystem-like (e.g. "Environmental Health and Safety", "Thornwick Foundation — Mirela Ostroff"). This benchmark isolates the value of navigating by *label* (structural) versus navigating by *content* (semantic/lexical).
+
+| Property | Value |
+|---|---|
+| Total questions | 100 (50 discovery + 50 extraction) |
+| Context docs per question | 10 |
+| Gold docs | 2 |
+| Distractor docs | 8 |
+| Structural navigation | Required for discovery; optional for extraction |
+| Seed | 42 |
+
 ## 4.2 Baselines
 
 | System | Description | Address Spaces |

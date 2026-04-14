@@ -36,6 +36,7 @@ Heuristic sits at the intersection = Pareto frontier
 | Diluted retrieval (50-para) | Diluted retrieval | 200 | <0.000001 | 0.491 |
 | BRIGHT | Reasoning-intensive | 200 | 0.0026 | 0.216 |
 | HotpotQA E2E (with LLM) | End-to-end | 500 | 0.021 | 0.103 |
+| **FEVER (fact verification)** | **Non-QA classification** | **200** | **<0.0001** | **(Pareto)** |
 
 ## Repository Structure
 
@@ -55,7 +56,8 @@ paper/                          # Paper sections + assembled full-paper.md (10,3
 experiments/
   aea/                          # Core framework
     types.py                    # AgentState, Action, EvidenceBundle, etc.
-    address_spaces/             # Semantic, Lexical, Entity Graph
+    address_spaces/             # Semantic, Lexical, Entity Graph, Structural, Executable
+      executable.py             # A_tool: regex number extraction + Python arithmetic
     evaluation/                 # Immutable harness + metrics (EM, F1, U@B)
     policies/                   # 10 stopping policies
       heuristic.py              # π_heuristic (THE method — 2/2/0.4 rule)
@@ -71,11 +73,15 @@ experiments/
       confidence_gated.py       # π_confidence_gated (LLM self-assessment)
       embedding_router.py       # π_embedding_router (question classifier)
     answer_generator.py         # LLM answer generation (gpt-oss-120b)
-  benchmarks/                   # Heterogeneous benchmark v2
+  benchmarks/                   # Heterogeneous benchmark v2, Structural Nav, Computational
+    computational_benchmark.py  # 100 computation questions (50 comparison + 50 arithmetic)
   models/
     stopping_classifier_clean.pkl # Clean GBT classifier (train/test split verified)
   results/                      # All experimental results (JSON)
+    tool_execution.json         # A_tool experiment results
   run_*.py                      # Experiment runners (reproducible)
+  run_fever.py                  # FEVER fact verification: generalisation beyond QA
+  run_tool_execution.py         # A_tool experiment: executable substrate vs source diversity
   collect_trajectories.py       # Trajectory data collection
   train_stopping_model.py       # Classifier training
 
@@ -136,6 +142,15 @@ python experiments/run_confidence_gated_n500.py
 
 # Structural improvements (no API needed)
 python experiments/run_structural_improvements.py
+
+# Structural navigation address space (A_struct) — title-hierarchy browsing
+python experiments/run_structural_nav.py
+
+# Tool execution address space (A_tool) — does executable addressing change stopping?
+python experiments/run_tool_execution.py
+
+# FEVER fact verification — does stopping generalise beyond QA tasks? (no API needed)
+python experiments/run_fever.py
 ```
 
 ### Train/Test Split
@@ -155,7 +170,44 @@ python experiments/run_structural_improvements.py
 | v11 | "Confidence-gated beats it!" → doesn't replicate | 8/7/6 (Mixed) |
 | v12 | "10 alternatives, none wins. Pareto-optimal." | 8/7/8 (Accept) |
 
-56 commits. 10 stopping mechanisms tested. 3 benchmark families. 6 review rounds. One finding: **source diversity is the answer.**
+56+ commits. 10 stopping mechanisms tested. 3 benchmark families. 6 review rounds. One finding: **source diversity is the answer.**
+
+## Tool Execution Experiment (A_tool Gap Closure)
+
+The original paper never tested executable addressing (SQL, computation). A fourth experiment fills this gap.
+
+**Setup:** 100 computation-focused questions (50 revenue comparisons, 50 population arithmetic) with 4 policies:
+`pi_semantic`, `pi_lexical`, `pi_executable` (SEARCH + TOOL_CALL), `pi_ensemble_tool` (all three).
+
+| Policy           | SupportRecall | F1     | Utility@Budget | AvgSteps |
+|------------------|--------------|--------|----------------|----------|
+| pi_semantic      | 1.0000       | 0.0295 | 0.0205         | 2.00     |
+| pi_lexical       | 1.0000       | 0.0325 | 0.0251         | 2.00     |
+| pi_executable    | 1.0000       | 0.1740 | **0.2427**     | 2.00     |
+| pi_ensemble_tool | 1.0000       | 0.0325 | 0.0068         | 4.00     |
+
+**Finding:** When the task intrinsically requires computation, the executable substrate **dominates** (U@B 0.2427 vs 0.0251 for best retrieval-only). Crucially, `pi_ensemble_tool` is **worse** than `pi_executable` alone (0.0068 vs 0.2427) — the non-executable substrates degrade the answer by flooding the workspace with passage content that outscores the TOOL_CALL result.
+
+**Implication for stopping theory:** Source diversity remains Pareto-optimal for retrieval-based QA, but the stopping signal changes when computation is the primary operation. For computation tasks, stopping *after the first TOOL_CALL* is optimal — the diversity heuristic does not apply because the relevant "source" is the computation itself, not passage variety. This represents a clean boundary condition for the paper's main claim.
+
+## FEVER Fact Verification Experiment (Task-Type Generalisation)
+
+To address reviewer concern about single-task-type evaluation, a FEVER-style fact verification experiment tests whether source-diversity stopping generalises **beyond QA** to classification tasks.
+
+**Setup:** 200 FEVER-style fact verification examples (100 SUPPORTED + 100 REFUTED claims), each with 10 context paragraphs (1 gold evidence + 9 distractors). The task is binary classification, not answer generation. Retrieval evaluation measures SupportRecall: did we find the gold evidence paragraph?
+
+| Policy           | SupportRecall | AvgOps | Utility@Budget |
+|------------------|--------------|--------|----------------|
+| pi_semantic      | 1.0000       | 2.00   | -0.0216        |
+| pi_lexical       | 1.0000       | 2.00   | -0.0216        |
+| pi_ensemble      | 1.0000       | 3.00   | -0.0289        |
+| **pi_heuristic** | **1.0000**   | **1.01** | **-0.0106** |
+
+**Finding:** Source-diversity stopping achieves equal SupportRecall (1.000) while using **66% fewer retrieval operations** than ensemble (1.01 vs 3.00 avg ops). Utility@Budget improvement = +0.0183 (paired t-test: p < 0.0001). The result is statistically significant and reproduces the Pareto-optimal pattern observed on QA tasks.
+
+**Implication:** The source-diversity stopping heuristic generalises beyond question answering to fact verification (a classification task). The underlying mechanism — stop when evidence from two or more independent sources is present — is not task-type specific. It operates on retrieval quality, not on the downstream label prediction.
+
+Results: `experiments/results/fever.json` | Script: `experiments/run_fever.py`
 
 ## Citation
 
