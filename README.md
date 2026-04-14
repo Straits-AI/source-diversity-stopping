@@ -72,10 +72,22 @@ experiments/
       embedding_router.py       # π_embedding_router (question classifier)
     answer_generator.py         # LLM answer generation (gpt-oss-120b)
   benchmarks/                   # Heterogeneous benchmark v2
+  models/
+    stopping_classifier_clean.pkl # Clean GBT classifier (train/test split verified)
   results/                      # All experimental results (JSON)
   run_*.py                      # Experiment runners (reproducible)
   collect_trajectories.py       # Trajectory data collection
   train_stopping_model.py       # Classifier training
+
+deprecated/                     # Superseded files kept for reference
+  experiments/                  # Early runners (run_heterogeneous_benchmark, run_llm_routed,
+                                #   run_with_llm_answers, run_musique)
+  experiments/results/          # Stale result files (v1 benchmark, rate-limited runs,
+                                #   intermediate checkpoints)
+  models/                       # Old contaminated stopping_classifier.pkl
+  paper/                        # Early paper files (outline, comparison_table,
+                                #   06a-root-cause-analysis)
+  poc/                          # Early proof-of-concept substrate switching scripts
 
 research-log/                   # Full research log (8 entries)
   000-setup.md                  # Phase 0: Idea DNA, evaluation contract
