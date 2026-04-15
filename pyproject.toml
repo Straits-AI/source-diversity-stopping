@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=64", "wheel"]
+build-backend = "setuptools.backends._legacy:_Backend"
+
+[project]
+name = "convergence-retrieval"
+version = "0.1.0"
+description = "Multi-substrate retrieval with convergence-based stopping"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.10"
+authors = [
+    {name = "Straits-AI"},
+]
+dependencies = [
+    "numpy>=1.21",
+    "rank_bm25>=0.2",
+    "sentence-transformers>=2.2",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+]
+
+[tool.setuptools.packages.find]
+include = ["convergence_retrieval*"]
