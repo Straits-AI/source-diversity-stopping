@@ -79,8 +79,10 @@ experiments/
     stopping_classifier_clean.pkl # Clean GBT classifier (train/test split verified)
   results/                      # All experimental results (JSON)
     tool_execution.json         # A_tool experiment results
+    codebase_nav.json           # Codebase navigation experiment (code-search generalisation)
   run_*.py                      # Experiment runners (reproducible)
   run_fever.py                  # FEVER fact verification: generalisation beyond QA
+  run_codebase_nav.py           # Codebase navigation: code-search generalisation (no API)
   run_tool_execution.py         # A_tool experiment: executable substrate vs source diversity
   collect_trajectories.py       # Trajectory data collection
   train_stopping_model.py       # Classifier training
@@ -151,6 +153,9 @@ python experiments/run_tool_execution.py
 
 # FEVER fact verification — does stopping generalise beyond QA tasks? (no API needed)
 python experiments/run_fever.py
+
+# Codebase navigation — does stopping generalise to code search? (no API needed)
+python experiments/run_codebase_nav.py
 ```
 
 ### Train/Test Split
@@ -189,6 +194,30 @@ The original paper never tested executable addressing (SQL, computation). A four
 **Finding:** When the task intrinsically requires computation, the executable substrate **dominates** (U@B 0.2427 vs 0.0251 for best retrieval-only). Crucially, `pi_ensemble_tool` is **worse** than `pi_executable` alone (0.0068 vs 0.2427) — the non-executable substrates degrade the answer by flooding the workspace with passage content that outscores the TOOL_CALL result.
 
 **Implication for stopping theory:** Source diversity remains Pareto-optimal for retrieval-based QA, but the stopping signal changes when computation is the primary operation. For computation tasks, stopping *after the first TOOL_CALL* is optimal — the diversity heuristic does not apply because the relevant "source" is the computation itself, not passage variety. This represents a clean boundary condition for the paper's main claim.
+
+## Codebase Navigation Experiment (Domain Generalisation — Code Search)
+
+To address reviewer concerns about generalisation beyond natural-language QA, this experiment tests whether source-diversity stopping works for **code search** — a structurally different retrieval task where the corpus is Python source files and queries ask about implementation locations.
+
+META: We test our own theory on our own codebase (experiments/aea/).
+
+**Setup:** 35 Python files from the AEA framework as documents; 50 code-search questions at three difficulty levels (16 easy / 18 medium / 16 hard). Context per question: gold file(s) + ~9 distractor files. No API calls; seed=42.
+
+| Policy           | SupportRecall | AvgOps | Utility@Budget |
+|------------------|--------------|--------|----------------|
+| pi_semantic      | 0.8200       | 2.00   | -0.1101        |
+| pi_lexical       | 0.8500       | 2.00   | -0.1100        |
+| pi_structural    | 0.6900       | 2.00   | -0.0348        |
+| pi_ensemble      | 0.9700       | 1.54   | -0.1051        |
+| **pi_heuristic** | **0.9700**   | **1.52** | **-0.1046** |
+
+**Finding:** Convergence-based stopping matches ensemble retrieval quality (SupportRecall=0.970 for both) while using slightly fewer operations (1.52 vs 1.54). The heuristic triggered early stops on 24/50 examples (48%) — whenever two distinct high-relevance files were found. Paired t-test vs ensemble: Δ=+0.0005, p=0.304 (n.s. — no significant degradation). On medium-difficulty questions, heuristic achieves SupportRecall=1.000 with 1.44 avg ops vs 1.50 for ensemble.
+
+**Substrate ranking for code search:** Lexical > Semantic > Structural for single-substrate recall. Structural navigation (filename matching) alone performs worst on recall but best on U@B due to lower cost. Ensemble + heuristic both dominate single substrates on recall.
+
+**Implication:** Source-diversity stopping generalises from QA to code navigation. The mechanism — stop when evidence from ≥2 independent files is present — is task-agnostic: it fires on retrieval quality, not on answer type.
+
+Results: `experiments/results/codebase_nav.json` | Script: `experiments/run_codebase_nav.py`
 
 ## FEVER Fact Verification Experiment (Task-Type Generalisation)
 

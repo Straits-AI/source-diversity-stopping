@@ -1,0 +1,225 @@
+{
+  "experiment": "codebase_navigation",
+  "seed": 42,
+  "n_examples": 50,
+  "corpus_size": 35,
+  "difficulty_breakdown": {
+    "easy": 16,
+    "medium": 18,
+    "hard": 16
+  },
+  "by_policy": {
+    "pi_semantic": {
+      "aggregated": {
+        "exact_match": 0.0,
+        "f1": 0.0,
+        "support_recall": 0.82,
+        "support_precision": 0.20400000000000001,
+        "bundle_coverage": 0.82,
+        "utility_at_budget": -0.11010690267262203,
+        "steps_taken": 2.0,
+        "tokens_used": 6990.76,
+        "latency_ms_total": 32.07080178661272,
+        "operations_used": 2.0
+      },
+      "policy_name": "pi_semantic",
+      "n_examples": 50,
+      "n_errors": 0,
+      "runtime_seconds": 22.65,
+      "stopped_reasons": {
+        "stop_action": 0,
+        "budget": 50,
+        "max_steps": 0
+      }
+    },
+    "pi_lexical": {
+      "aggregated": {
+        "exact_match": 0.0,
+        "f1": 0.0,
+        "support_recall": 0.85,
+        "support_precision": 0.2,
+        "bundle_coverage": 0.85,
+        "utility_at_budget": -0.11000098458035694,
+        "steps_taken": 2.0,
+        "tokens_used": 7180.16,
+        "latency_ms_total": 0.29537410708144307,
+        "operations_used": 2.0
+      },
+      "policy_name": "pi_lexical",
+      "n_examples": 50,
+      "n_errors": 0,
+      "runtime_seconds": 6.25,
+      "stopped_reasons": {
+        "stop_action": 0,
+        "budget": 50,
+        "max_steps": 0
+      }
+    },
+    "pi_structural": {
+      "aggregated": {
+        "exact_match": 0.0,
+        "f1": 0.0,
+        "support_recall": 0.69,
+        "support_precision": 0.172,
+        "bundle_coverage": 0.69,
+        "utility_at_budget": -0.034801641103022425,
+        "steps_taken": 2.0,
+        "tokens_used": 992.06,
+        "latency_ms_total": 0.042330906726419926,
+        "operations_used": 2.0
+      },
+      "policy_name": "pi_structural",
+      "n_examples": 50,
+      "n_errors": 0,
+      "runtime_seconds": 5.65,
+      "stopped_reasons": {
+        "stop_action": 50,
+        "budget": 0,
+        "max_steps": 0
+      }
+    },
+    "pi_ensemble": {
+      "aggregated": {
+        "exact_match": 0.0,
+        "f1": 0.0,
+        "support_recall": 0.97,
+        "support_precision": 0.20048412698412701,
+        "bundle_coverage": 0.97,
+        "utility_at_budget": -0.10506566386646467,
+        "steps_taken": 1.54,
+        "tokens_used": 5390.64,
+        "latency_ms_total": 18.04915993940085,
+        "operations_used": 1.54
+      },
+      "policy_name": "pi_ensemble",
+      "n_examples": 50,
+      "n_errors": 0,
+      "runtime_seconds": 7.31,
+      "stopped_reasons": {
+        "stop_action": 23,
+        "budget": 27,
+        "max_steps": 0
+      }
+    },
+    "pi_heuristic": {
+      "aggregated": {
+        "exact_match": 0.0,
+        "f1": 0.0,
+        "support_recall": 0.97,
+        "support_precision": 0.20048412698412701,
+        "bundle_coverage": 0.97,
+        "utility_at_budget": -0.10458705569431649,
+        "steps_taken": 1.52,
+        "tokens_used": 5325.06,
+        "latency_ms_total": 12.616708294954151,
+        "operations_used": 1.52
+      },
+      "policy_name": "pi_heuristic",
+      "n_examples": 50,
+      "n_errors": 0,
+      "runtime_seconds": 7.11,
+      "stopped_reasons": {
+        "stop_action": 24,
+        "budget": 26,
+        "max_steps": 0
+      }
+    }
+  },
+  "by_difficulty": {
+    "pi_semantic": {
+      "easy": {
+        "support_recall": 0.8125,
+        "utility_at_budget": -0.11012083761233954,
+        "operations_used": 2.0
+      },
+      "medium": {
+        "support_recall": 0.8888888888888888,
+        "utility_at_budget": -0.11007007686798548,
+        "operations_used": 2.0
+      },
+      "hard": {
+        "support_recall": 0.75,
+        "utility_at_budget": -0.11013439676312071,
+        "operations_used": 2.0
+      }
+    },
+    "pi_lexical": {
+      "easy": {
+        "support_recall": 0.8125,
+        "utility_at_budget": -0.11000121047746991,
+        "operations_used": 2.0
+      },
+      "medium": {
+        "support_recall": 0.9166666666666666,
+        "utility_at_budget": -0.11000093144265487,
+        "operations_used": 2.0
+      },
+      "hard": {
+        "support_recall": 0.8125,
+        "utility_at_budget": -0.11000081846315879,
+        "operations_used": 2.0
+      }
+    },
+    "pi_structural": {
+      "easy": {
+        "support_recall": 0.5,
+        "utility_at_budget": -0.03451577790849357,
+        "operations_used": 2.0
+      },
+      "medium": {
+        "support_recall": 0.6944444444444444,
+        "utility_at_budget": -0.03473902248502106,
+        "operations_used": 2.0
+      },
+      "hard": {
+        "support_recall": 0.875,
+        "utility_at_budget": -0.035157950242802806,
+        "operations_used": 2.0
+      }
+    },
+    "pi_ensemble": {
+      "easy": {
+        "support_recall": 0.9375,
+        "utility_at_budget": -0.10526465659689468,
+        "operations_used": 1.5625
+      },
+      "medium": {
+        "support_recall": 1.0,
+        "utility_at_budget": -0.10469644788553231,
+        "operations_used": 1.5
+      },
+      "hard": {
+        "support_recall": 0.96875,
+        "utility_at_budget": -0.10528203911458356,
+        "operations_used": 1.5625
+      }
+    },
+    "pi_heuristic": {
+      "easy": {
+        "support_recall": 0.9375,
+        "utility_at_budget": -0.10523628321163414,
+        "operations_used": 1.5625
+      },
+      "medium": {
+        "support_recall": 1.0,
+        "utility_at_budget": -0.1033789350689932,
+        "operations_used": 1.4444444444444444
+      },
+      "hard": {
+        "support_recall": 0.96875,
+        "utility_at_budget": -0.1052969638804876,
+        "operations_used": 1.5625
+      }
+    }
+  },
+  "ttest_heuristic_vs_ensemble": {
+    "n": 50,
+    "mean_heuristic": -0.10458705569431649,
+    "mean_ensemble": -0.10506566386646467,
+    "mean_diff": 0.00047860817214815635,
+    "std_diff": 0.0032604203566972603,
+    "t_stat": 1.0379860479097232,
+    "p_value": 0.30437173859227395,
+    "significant": 0
+  }
+}
