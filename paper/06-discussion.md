@@ -1,142 +1,144 @@
 # 6 Discussion
 
-## 6.1 Smart Stopping Beats Smart Searching
+## 6.1 First Principles: Why Convergence Is the Right Stopping Signal
 
-The end-to-end results (N=500, clean split, Table 1) establish that the heuristic stopping rule achieves the highest E2E U@B (0.759) despite producing lower-quality answers than the ensemble (F1 0.612 vs 0.681, EM 0.448 vs 0.510). The heuristic's advantage is entirely cost-driven: 1.16 operations versus 3.00, a 61% reduction that more than compensates for the quality gap under μ = 0.3.
+The stopping problem in heterogeneous document navigation reduces to a fundamental tradeoff at each step:
 
-This is an honest cost-quality tradeoff, not a universal superiority claim. The sensitivity analysis (Table 4) shows the crossover at μ ≈ 0.3: below this threshold, the ensemble's higher answer quality dominates; above it, the heuristic's cost efficiency dominates. The practical implication is a design principle for retrieval systems: **default to restraint and require strong evidence of a coverage gap before escalating,** but only when retrieval cost is a binding constraint.
+**Value of one more step = Expected Information Gain − Cost − Noise Added**
 
-## 6.2 The Positive Routing Gap
+Stop when this is ≤ 0.
 
-The LLM-routed policy demonstrates that positive routing — choosing the right substrate for each question — is achievable. Its action distribution (STOP=33%, SEMANTIC=19%, LEXICAL=35%, HOP=14%) shows genuine per-question substrate variation, and its higher recall (0.845 vs 0.795, from a separate evaluation run; see Section 5.4) confirms that the LLM identifies evidence gaps the heuristic misses.
+Estimating this directly is hard for three reasons, each corresponding to one of our empirical ceilings:
 
-But positive routing is not yet cost-efficient. The gap between the LLM router's routing intelligence and the heuristic's cost discipline identifies the central open challenge: **calibrated stopping** — a policy that combines the LLM's ability to recognize genuinely insufficient evidence with the heuristic's discipline to stop when evidence is merely adequate rather than comprehensive.
+1. **Expected Information Gain is a set function** (content-aware ceiling). The value of finding passage E₃ depends on whether you already have E₁ and E₂. Evidence can be complementary (E₁+E₂ together answer the question) or redundant (E₃ adds nothing). Assessing this requires modeling passage interactions — the exact set function problem our seven content-aware methods fail at (Section 5.4).
 
-We conjecture that the optimal policy lies between these two extremes: it would stop as often as the heuristic (saving cost on easy questions) while routing as intelligently as the LLM (achieving higher recall on hard questions). Training such a policy requires a reward signal that captures the downstream cost-quality tradeoff — exactly the Utility@Budget metric we define.
+2. **The evidence distribution is unknown** (why learning fails). You don't know what's out there until you search. A learned classifier trained on one distribution sees different evidence patterns on another — the OOD failure of our GBT classifier.
 
-## 6.3 Comparison with Existing Systems
+3. **Estimating value costs resources** (why LLM-based stopping loses). Every token spent assessing evidence quality is a token not spent gathering evidence. Confidence-gated stopping and answer stability both lose to the heuristic because the assessment cost exceeds the assessment value.
 
-Our comparison with FLARE, Self-RAG, Adaptive-RAG, IRCoT, and CRAG reveals that our approach occupies a distinct niche: it is the only system that (a) routes across qualitatively different substrate types, (b) includes an explicit cost model, and (c) treats stopping as a first-class routing decision.
+**Source diversity sidesteps all three.** Instead of estimating "how much better could evidence get?" (hard), it checks: "has evidence converged from independent pathways?" (easy). This is a **convergence signal** — and convergence is fundamentally the right stopping criterion because:
 
-Direct numerical comparison is not valid: those systems report downstream QA accuracy after full LLM generation on different benchmarks with different assumptions. However, the design dimension analysis shows that none of the existing systems addresses the stopping-vs-routing tradeoff that our experiments identify as central.
+- **Independent pathways have independent failure modes.** Semantic search fails when there's no distributional similarity; lexical search fails when there's no keyword overlap; structural navigation fails when hierarchy doesn't match the query. When TWO independent methods succeed despite having independent failure modes, the probability that evidence is relevant is much higher than when only one succeeds. This is the same reasoning behind ensemble consensus in ML.
 
-## 6.4 Why the Heuristic Resists Improvement: A Root Cause Analysis
+- **Convergence is observable, cheap, and distribution-invariant.** It requires only counting source identifiers — zero model inference, zero training, zero distribution-specific assumptions.
 
-The central puzzle of our experimental program is not that the heuristic stopping rule works well -- that was expected from the ablation analysis (Section 5.3). The puzzle is that five qualitatively different sophisticated approaches all fail to improve upon it, each for a different proximate reason but -- as we argue below -- for the same underlying cause. The following analysis proposes explanatory hypotheses for each failure, grounded in the experimental evidence but necessarily post-hoc. This section provides a rigorous analysis of why simple structural stopping signals resist replacement by content-aware, learned, or decomposition-based alternatives.
+- **Convergence signals diminishing returns.** If two independent approaches have already found evidence, a third is likely to find the same thing (redundancy) or nothing new (diminishing marginal gain).
+
+The source-diversity heuristic is the simplest operationalization of this convergence principle: stop when at least two independent retrieval pathways have each contributed evidence. Our experiments show this is sufficient — no enrichment we tested (threshold optimization, novelty detection, dual signals) improves on it (Section 5.12).
+
+## 6.2 The Retrieval-Computation Boundary
+
+The convergence principle applies to **retrieval and navigation** tasks — where the agent gathers evidence from external sources. It does NOT apply to **computation** tasks, where the answer requires calculation rather than evidence (Section 5, tool execution results). For computation, the right stopping signal is tool-execution completion: once the calculator has produced a result, stop.
+
+This boundary is principled, not arbitrary. Retrieval and computation have different information structures:
+
+| Property | Retrieval/Navigation | Computation |
+|----------|---------------------|-------------|
+| Value of more steps | Diminishing (convergence) | Zero after execution |
+| Independent pathways | Multiple (semantic, lexical, structural) | One (execute the tool) |
+| Evidence interactions | Set function (complementary/redundant) | Deterministic (input → output) |
+| Right stopping signal | Convergence of pathways | Tool completion |
+
+## 6.3 Mapping to Document Navigation Domains
+
+The convergence principle applies to ANY heterogeneous information environment where an agent navigates multiple substrates:
+
+**Codebase navigation.** A coding agent searching for a bug greps for error messages (lexical), embeds code chunks (semantic), traverses import graphs (relational), and browses the file tree (structural). When grep, embeddings, and import tracing all converge on the same module — that's convergence from independent pathways. No existing coding tool (Cursor, aider, Copilot, SWE-agent) uses diversity-based stopping; all rely on LLM self-judgment or hard token budgets, which our experiments show are suboptimal for the retrieval component of the task.
+
+**Legal discovery.** An attorney searches case law by keyword, follows citation chains, and navigates statute hierarchies. When keyword search, citation graph traversal, and statutory hierarchy all point to the same legal principle — independent pathways have converged.
+
+**Enterprise document retrieval.** An employee searches for a policy by keywords, browses the organizational file tree, and follows cross-references from related documents. When search, tree navigation, and cross-references all lead to the same document — convergence.
+
+**Medical record review.** A clinician searches patient records by diagnosis code, temporal ordering, and specialist cross-references. When structured queries, temporal browsing, and referral chains converge on the same clinical events — sufficient evidence.
+
+In each domain, the substrates differ but the stopping logic is identical: **stop when independent navigation pathways converge.** Our experiments validate this on five benchmarks spanning QA, fact verification, structural navigation, and reasoning-intensive retrieval. The codebase and legal/medical/enterprise domains are natural extensions where the same principle should apply, with tool-execution completion handling the computation boundary.
+
+## 6.4 Why Ten Content-Aware Alternatives Fail: The Two-Ceiling Framework
+
+The central puzzle is that ten qualitatively different approaches — spanning seven design categories — all fail to improve on the convergence heuristic. The following analysis proposes explanatory hypotheses grounded in the experimental evidence.
 
 ### 6.4.1 The Empirical Phenomenon
 
-We tested five approaches designed to improve on the heuristic's stopping decision ("stop when the workspace contains 2+ high-relevance items from 2+ distinct sources"):
-
 | Approach | Mechanism | AvgOps | E2E U@B | vs Heuristic |
 |---|---|---|---|---|
-| Cross-encoder stopping | MS MARCO scores (question, passage) pairs | 3.09 | 0.655 | -0.104 (p<0.0001) |
-| NLI bundle assessment | DeBERTa-v3 NLI on concatenated evidence | 6.09 | 0.433 | -0.326 (p<0.0001) |
-| LLM decomposition | gpt-oss-120b decomposes question into sub-requirements | 2.95 | 0.758 | -0.001 |
-| Learned GBT classifier | Gradient boosted tree on workspace statistics | 5.00 | 0.498 | -0.261 (catastrophic) |
-| Embedding router | Question embedding predicts best retrieval strategy | 1.28 | tied | +0.001 |
-| **Heuristic** | **2+ items from 2+ sources** | **1.16** | **0.759** | **--** |
+| Cross-encoder | MS MARCO (q, passage) scoring | 3.09 | 0.655 | -0.104 |
+| NLI bundle | DeBERTa-v3 on concatenated evidence | 6.09 | 0.433 | -0.326 |
+| Learned GBT | Workspace statistics classifier | 5.00 | 0.498 | -0.261 |
+| LLM decomposition | Requirement parsing | 2.95 | 0.758 | -0.001 |
+| Answer stability | Multi-draft convergence | 3.18 | 0.668 | -0.087 |
+| Confidence-gated | LLM self-assessment | 2.23* | 0.699* | -0.060* |
+| Embedding router | Question-type classifier | 1.28 | tied | +0.001 |
+| Threshold optimization | Grid search (30 configs) | 1.16 | 0.031 | ≈0 |
+| Novelty detection | Embedding similarity | 1.16 | 0.031 | ≈0 |
+| Dual signal | Source diversity + relevance gap | 1.16 | 0.031 | ≈0 |
+| **Heuristic** | **Source diversity (2/2)** | **1.16** | **0.759** | **baseline** |
 
-All five approaches either degrade performance or merely tie. The NLI result is most informative: it correctly takes the full evidence bundle as premise (addressing the cross-encoder's set function limitation), yet fails even more severely (d=-0.731) because multi-hop questions resist conversion to well-formed entailment hypotheses. A contributing factor is context truncation (DeBERTa-v3-small's 512-token window limits premise length); however, the primary failure mode — that "Were X and Y of the same nationality?" does not translate to a natural NLI hypothesis regardless of evidence quality — is fundamental rather than architectural.
+*Confidence-gated: with LLM cost included (+0.23 ops). Fails to replicate at N=500 (p=0.97) and on BRIGHT (p=0.006, worse).
 
-### 6.4.2 The Structural Signal Thesis
+### 6.4.2 The Content-Aware Ceiling
 
-The heuristic's stopping criterion -- "2+ high-relevance items from 2+ different sources" -- operates on a **structural** property of the workspace, not on the **content** of any passage. It answers the question "has evidence converged from independent retrieval pathways?" rather than "does the evidence answer the question?" This distinction is the key to its robustness.
+Every content-aware method (rows 1–7) attempts to estimate the **value function** — "how much would more evidence improve the answer?" Each introduces noise that exceeds the information gained:
 
-Structural signals have three properties that content signals lack:
+- The cross-encoder estimates per-passage relevance, not bundle sufficiency (set function decomposition failure).
+- The NLI model takes bundles as premise but multi-hop questions resist well-formed hypothesis construction.
+- The GBT classifier captures distribution-specific workspace statistics (spurious correlation under shift).
+- The LLM decomposition introduces parsing noise (~40% malformed requirements).
+- Answer stability measures draft phrasing changes, not answer correctness (phrasing noise).
+- Confidence-gated stopping doesn't replicate at scale (N=500) or across benchmarks (BRIGHT).
+- The embedding router confirms routing isn't the bottleneck.
 
-**Distribution invariance.** The predicate "items from 2+ sources" is a counting function over source identifiers. It does not depend on passage vocabulary, entity density, syntactic structure, or any other property of the text distribution. When the question distribution shifts -- from HotpotQA to 2WikiMultiHopQA, from bridge questions to comparison questions -- the structural predicate remains well-defined and its threshold remains calibrated. This explains why the heuristic achieves the best E2E U@B on 2WikiMultiHopQA (1.055 vs 1.031 for semantic-only), even though it was never tuned on that benchmark.
+The unifying explanation: **all seven attempt to model the value of future evidence, which requires solving the set function problem. The convergence heuristic succeeds by not attempting this estimation at all.** This connects to optimal stopping theory: threshold rules on low-noise observables dominate value-estimation approaches when the value function is hard to learn.
 
-**Compositionality for free.** Multi-hop questions have a compositional answer structure: the answer depends on a conjunction of facts, each potentially residing in a different passage. The heuristic's multi-source requirement is a natural proxy for compositionality -- if evidence has arrived from two independent retrieval pathways, the workspace likely contains both halves of the bridge. This proxy is imperfect but correct frequently enough to dominate alternatives that attempt to verify compositionality explicitly but fail due to noise.
+### 6.4.3 The Structural Ceiling
 
-**Computational cheapness.** The heuristic requires no model inference, no API calls, and no learned parameters. Every operation the stopping mechanism consumes is an operation unavailable for retrieval. The cross-encoder spends inference budget on passage scoring; the decomposition approach spends an entire LLM call on question analysis. The heuristic spends nothing, preserving its full budget for evidence gathering.
+The three structural improvements (rows 8–10) converge to identical behavior because source diversity is the **binding constraint** in the stopping decision. Grid search over 30 threshold configurations confirms the original 2/2/0.4 parameters are near-optimal; novelty detection and relevance-convergence signals are redundant with source diversity.
 
-### 6.4.3 Why Content-Aware Stopping Fails on Multi-Hop QA
+This establishes that source diversity **saturates** the structural signal space: no zero-cost enrichment tested improves upon it.
 
-The cross-encoder stopping policy uses a pre-trained MS MARCO model to score (question, passage) pairs. It stops when the top cross-encoder score exceeds a high threshold (7.0) or when two or more passages exceed a medium threshold (3.0). Yet it achieves a worse E2E U@B than both the heuristic and the ensemble (0.655), significantly below even the brute-force ensemble (0.707, p=0.0001).
+### 6.4.4 The Pareto Frontier
 
-The root cause is a **set function decomposition failure**. Multi-hop questions require an evidence *bundle* -- a set of passages that jointly contain the answer even though no individual passage does. Consider "What nationality is the director of Jaws?" The evidence consists of two passages: one identifying Steven Spielberg as the director, and another identifying Spielberg as American. Neither passage, scored independently against the full question, receives a high cross-encoder score, because neither individually answers the question.
+The heuristic sits at the intersection of these two ceilings:
+- Moving "up" (adding content awareness) increases noise without improving quality
+- Moving "right" (enriching structural signals) is impossible — source diversity is already maximal
 
-This is a fundamental limitation, not a threshold-tuning problem. The sufficiency of an evidence bundle is a **set function** -- it depends on the joint content of {p_1, p_2, ..., p_k}. The cross-encoder computes g(q, p_i) for each p_i independently. For multi-hop questions, sufficiency S(q, P) is not decomposable as any function of individual scores, because the sufficiency emerges from the *combination* of passages.
+This intersection IS the Pareto frontier for the stopping decision, within the space of ten tested alternatives.
 
-What would work is a model that scores the entire bundle: f(q, {p_1, ..., p_k}) -> sufficiency. But training such a model requires multi-hop-specific supervision, which defeats the generalization goal. The cross-encoder's pre-training on MS MARCO passage ranking -- a single-hop task -- cannot provide the compositional reasoning needed for multi-hop sufficiency assessment.
+## 6.5 Comparison with Existing Systems
 
-The operational consequence is severe: because the cross-encoder rarely triggers a stop, the policy defaults to exhaustive retrieval (3.09 ops vs the ensemble's 3.00), paying the full cost while achieving lower quality because continued retrieval introduces noise.
+Our comparison with existing adaptive retrieval and coding tools reveals that no system uses convergence-based stopping:
 
-### 6.4.4 Why Learned Stopping Fails to Generalize
+| System | Domain | Stopping Mechanism |
+|--------|--------|-------------------|
+| Self-RAG | QA | Learned reflection tokens (single modality) |
+| FLARE | QA | Low-confidence triggers retrieval |
+| Cursor | Code | LSP lint feedback + context budget |
+| aider | Code | Hard token budget for repo map |
+| Copilot Agent | Code | LLM self-judgment |
+| SWE-agent | Code | LLM decides; output caps |
+| Sourcegraph | Code search | Top-k reranker cutoff |
 
-The gradient boosted tree classifier, trained on trajectory data from HotpotQA questions 500-999, achieves 93.3% accuracy and 71.7% F1 on in-distribution held-out data. But when evaluated on questions 0-499, it achieves 5.00 average operations and 0.498 E2E U@B -- worse than random. The classifier effectively never triggers STOP on the evaluation distribution.
+None checks whether evidence has converged from independent pathways. Source-diversity stopping fills this gap.
 
-This is a textbook case of **spurious correlation under distribution shift**. The classifier's 9 features capture surface statistics of the retrieval trajectory. On the training distribution, these statistics correlate with the optimal stopping point: for example, mean_relevance > 0.45 at step 1 may reliably indicate that both gold passages have been retrieved. But this correlation is contingent on properties of the training questions: their entity density, lexical overlap, and passage characteristics.
+## 6.6 Limitations
 
-When the distribution shifts, these contingent correlations break. The evaluation questions have different feature distributions, causing no feature vector to fall in the classifier's "stop" region.
+1. **E2E evaluation on one benchmark.** End-to-end evaluation with LLM answer generation (N=500, p=0.021) uses only HotpotQA Bridge. BRIGHT and other evaluations are retrieval-only. The E2E effect size is small (d=0.103).
 
-The heuristic avoids this by construction. Its criterion -- "2+ items from 2+ sources" -- is a distribution-invariant predicate. It depends only on count and identity properties of the workspace, which are structurally stable across distributions. This connects to the principle from robust statistics that **estimators using fewer distributional assumptions degrade more gracefully under distribution shift** (Huber, 1964; Hampel et al., 1986).
+2. **Custom evaluation metric.** Utility@Budget is author-defined. Sensitivity across μ (Section 5.5) shows crossover at μ≈0.3; sensitivity to η has not been tested. The Pareto-optimality claim is bounded by the tested parameter range.
 
-### 6.4.5 Why Question Decomposition Fails in Practice
+3. **Pareto-optimality is bounded.** We test ten alternatives across seven design categories, but the space is unbounded. RL-trained stopping policies are not tested. The claim is "within tested alternatives."
 
-The decomposition policy decomposes each question into information requirements using gpt-oss-120b, then checks whether retrieved passages satisfy each requirement via keyword matching. The approach is intellectually appealing but achieves 2.95 average operations and lower utility than the heuristic.
+4. **Two effective substrates for most experiments.** Semantic + lexical are the primary substrates; entity graph is a negative control; structural and executable are tested on separate benchmarks. A unified evaluation with all four substrates on the same benchmark would strengthen the convergence argument.
 
-The root cause is a **precision-matchability tradeoff**. The decomposition must simultaneously satisfy two competing constraints:
+5. **Codebase navigation is proposed, not tested.** The mapping to code search is based on structural analysis of existing tools, not empirical validation. Testing on SWE-bench or a code retrieval benchmark is the highest-priority future work.
 
-1. **Completeness**: requirements must cover all information needed. Missing a requirement causes premature stopping.
-2. **Matchability**: each requirement must be verifiable against passages using keyword overlap. Unmatchable requirements appear perpetually unsatisfied, preventing stopping.
+6. **LLM model identity.** Answer generation uses "gpt-oss-120b" via OpenRouter. Results may differ with other models.
 
-These constraints are in tension. Precise requirements (e.g., "Steven Spielberg's nationality") succeed only with exact lexical matches. Vague requirements (e.g., "information about the person") match everything. In practice, the LLM produces malformed or unmatchable requirements approximately 40% of the time. When this happens, the 100% coverage threshold is never reached, and the policy defaults to exhaustive retrieval.
+## 6.7 Future Work
 
-The heuristic sidesteps this tradeoff entirely by not attempting to understand *what* evidence is needed. It asks only *whether* independent retrieval pathways have converged.
+**Codebase navigation.** Test convergence-based stopping on SWE-bench-style tasks where the agent navigates with grep + embeddings + tree-sitter AST + import graph. The prediction: source-diversity stopping will reduce wasted retrieval steps compared to LLM self-judgment (the current default in coding agents).
 
-### 6.4.6 The Deeper Lesson: Optimal Stopping Under Uncertainty
+**Multi-level convergence.** Document navigation often involves hierarchical decisions (find the right directory → find the right file → find the right function). Testing convergence at each level independently could yield a more nuanced stopping policy.
 
-The failures can be unified under **optimal stopping theory** (Ferguson, 1989; Peskir and Shiryaev, 2006). The retrieval stopping decision is structurally analogous to the classical optimal stopping problem: at each step, the agent observes a signal and decides whether to stop or continue at a cost.
+**Convergence + verification hybrid.** For domains with verifiable signals (code: lint passes; math: proof checks), combining convergence-based stopping with verification signals could improve on either alone.
 
-The classical result is that threshold-based rules on **observable, low-noise signals** dominate value-estimation approaches when the value function is hard to learn. The heuristic implements exactly such a rule: it thresholds on a directly observable signal (source diversity count) without estimating the value of continued retrieval. The sophisticated approaches fail because they attempt the harder estimation task:
-
-- The cross-encoder estimates passage-level relevance -- a noisy proxy for bundle-level sufficiency.
-- The learned classifier estimates the optimal stopping point -- a distribution-dependent estimate.
-- The decomposition approach estimates question-level requirements -- introducing parsing noise.
-- The embedding router estimates the optimal strategy -- confirming routing is not the bottleneck.
-
-In each case, the estimation step introduces noise exceeding the information gain from content awareness. The heuristic wins by asking a **simpler question** whose answer is observable, cheap, and robust. This connects to the broader ML principle that simple, robust baselines dominate complex learned approaches when the learning problem is high-dimensional and the evaluation distribution differs from training (Lipton et al., 2018; D'Amour et al., 2020).
-
-### 6.4.7 What Would Actually Beat the Heuristic?
-
-The failure analysis defines the requirements for improvement. A successful approach must simultaneously be: (1) **content-aware** -- to handle edge cases where diverse-source evidence is still insufficient; (2) **bundle-level** -- to assess passage *sets* rather than individual passages; (3) **noise-robust** -- to degrade gracefully when content analysis is imperfect; and (4) **distribution-invariant** -- to generalize without retraining.
-
-These requirements are jointly difficult. Candidate approaches include NLI models applied to (question, evidence bundle) pairs, ensemble methods combining structural and content signals, and self-consistency checks. The most promising path is not to *replace* the heuristic but to *augment* it: use the structural signal as the default and add a content-aware refinement that fires only when the structural signal is ambiguous.
-
-### 6.4.8 Implications for the Adaptive Retrieval Field
-
-The stopping hierarchy -- structural heuristic > content-aware stopping > learned stopping on OOD data -- carries three implications:
-
-**First, the field's focus on routing optimization may be misplaced.** The embedding router confirms this: even good question-level routing produces only +0.001 U@B improvement because the bottleneck is stopping, not routing.
-
-**Second, structural signals should be the default for stopping decisions.** Content-aware stopping signals fail to generalize across question distributions, while structural signals are distribution-invariant by construction. Design principle: **default to structural stopping and escalate to content-aware stopping only when structural signals are uninformative.**
-
-**Third, the stopping problem is harder than it looks.** The five failures span the full spectrum of techniques -- pretrained models, LLM reasoning, supervised learning, embedding classification -- and none succeeds. This suggests the stopping problem in multi-hop retrieval has structure that resists the standard ML playbook, specifically because each new question is a new reasoning chain. Research on distribution-robust stopping criteria, drawing on robust statistics and optimal stopping theory, is a necessary complement to the current focus on retrieval quality and routing intelligence.
-
-## 6.5 Limitations
-
-1. **E2E evaluation on one benchmark.** End-to-end evaluation with LLM answer generation (N=500, p=0.021) uses only HotpotQA Bridge. BRIGHT and open-domain evaluations are retrieval-only. The E2E effect size is small (d=0.103).
-
-2. **Non-deterministic LLM answers.** Answer generation via gpt-oss-120b is non-deterministic, producing slight absolute U@B variation across runs (Tables 1 and 3). Relative comparisons within each evaluation are valid.
-
-3. **Custom evaluation metric.** Utility@Budget is author-defined. The sensitivity analysis across μ (Section 5.5) shows the crossover at μ≈0.3; sensitivity to η has not been tested. At η=0 (no precision bonus), the ranking could change. The Pareto-optimality claim is bounded by the tested parameter range.
-
-4. **Pareto-optimality is bounded.** We test ten alternatives across seven design categories, but the space of possible stopping mechanisms is unbounded. Reinforcement learning-trained stopping policies (e.g., Search-R1 or SmartRAG-style approaches applied specifically to stopping) are discussed in related work but not tested. The claim is "Pareto-optimal within tested alternatives," not universally optimal.
-
-5. **Three address spaces.** Real retrieval environments include web search, tool invocation, and structural navigation. Cost differentials across these modalities are larger, potentially amplifying the benefit of selective stopping.
-
-6. **Heuristic policy.** The routing decisions are hand-designed rules. The results show what is achievable without learning; a learned policy could close the gap between routing avoidance and positive routing.
-
-7. **LLM model identity.** Answer generation uses "gpt-oss-120b" via OpenRouter, an open-weight 120B-parameter model. Results may differ with other models. The model's exact version and provider endpoint should be noted for reproducibility.
-
-## 6.6 Future Work
-
-**Calibrated stopping policy.** Train a stopping classifier on trajectory data with downstream F1 as the reward signal. The key question: can a learned policy match the heuristic's stopping efficiency while capturing the LLM router's recall advantage?
-
-**Step-conditional routing.** Oracle trajectories show step-position preferences (semantic at step 1, entity at step 2). A router conditioned on step position could reduce false-positive escalations.
-
-**Expanded substrates.** Web search, tool execution, and structural navigation would test whether the stopping > searching hierarchy holds when cost differentials are larger.
-
-**Budget sensitivity.** The hierarchy may invert under very tight budgets (where any retrieval is expensive) or very loose budgets (where cost is negligible). Characterizing the budget regime where each policy dominates is an important practical question.
+**Real heterogeneous corpora.** Testing on enterprise document stores mixing PDFs, spreadsheets, code, and emails would validate the convergence principle in the most realistic setting.

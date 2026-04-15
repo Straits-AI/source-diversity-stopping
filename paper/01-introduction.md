@@ -1,29 +1,29 @@
 # 1 Introduction
 
-When should a multi-substrate retrieval system stop searching? This question is fundamental to cost-efficient retrieval-augmented generation, yet surprisingly underexplored. Existing adaptive retrieval systems focus on *what* to retrieve (Self-RAG [Asai et al., 2024], FLARE [Jiang et al., 2023]) or *how* to route queries (Adaptive-RAG [Jeong et al., 2024], SmartRAG [Gao et al., 2025]), but the stopping decision — whether to continue searching or return with current evidence — receives little systematic attention.
+Information-seeking agents — whether navigating codebases, browsing enterprise documents, or answering multi-hop questions — face a common problem: they must search across multiple heterogeneous substrates (semantic search, keyword matching, structural navigation, graph traversal) and decide **when to stop**. Navigation and retrieval are two faces of this problem: navigation determines *where to look next* in the information space, retrieval determines *what to extract*, and stopping determines *when evidence is sufficient*. The interplay among these decisions — across qualitatively different information substrates — is the core challenge of heterogeneous document navigation.
 
-We study this problem across semantic and lexical retrieval substrates and arrive at a strong empirical result: **a one-line structural heuristic — stop when the workspace contains evidence from two or more independent sources — is Pareto-optimal** within the space of stopping mechanisms we test. It significantly outperforms comprehensive retrieval across three benchmark families (HotpotQA p<0.0001, BRIGHT p=0.003, diluted retrieval p<0.0001), and no tested alternative improves upon it.
+This stopping decision is ubiquitous yet understudied. In codebase navigation, a coding agent greps for symbols, embeds code chunks, traverses import graphs, and checks LSP diagnostics — but no existing tool (Cursor, aider, Copilot, SWE-agent) has a principled criterion for when to stop gathering context. In retrieval-augmented generation, adaptive systems like Self-RAG [Asai et al., 2024] and FLARE [Jiang et al., 2023] learn when to retrieve but operate within a single modality. The question of when to stop searching across *multiple qualitatively different substrates* remains open.
 
-To establish this frontier, we conduct ten controlled experiments spanning seven design categories:
+We study this problem across six evaluation settings spanning four substrate types (semantic, lexical, structural, executable) and three task families (QA, fact verification, computation). We arrive at a strong empirical result: **a one-line structural heuristic — stop when evidence has arrived from two or more independent retrieval pathways — is Pareto-optimal** within ten tested alternatives. No alternative improves quality without increasing cost, and no alternative reduces cost without reducing quality.
 
-**Seven content-aware alternatives** (all fail): a cross-encoder for per-passage scoring, an NLI model for bundle-level entailment, a learned classifier on trajectory features, LLM-based question decomposition, answer-stability tracking across retrieval steps, confidence-gated stopping via LLM self-assessment, and embedding-based question routing. Each fails for a different proximate reason, but root cause analysis reveals a common pattern: assessing **evidence quality** requires evaluating a set function over passage bundles that current models cannot compute reliably.
+We establish this through three lines of evidence:
 
-**Three structural improvements** (all converge): threshold optimization via grid search, novelty-based stopping via embedding similarity, and dual-signal stopping via relevance convergence. All three converge to identical behavior as the original heuristic because source diversity is the binding constraint — other structural signals are redundant with it.
+**Line 1: The heuristic dominates comprehensive retrieval.** Across five benchmarks — multi-hop QA (HotpotQA, p<0.0001, N=1000), reasoning-intensive retrieval (BRIGHT, p=0.003, N=200), fact verification (FEVER-style, p≈0, N=200), structural navigation (p<0.001, N=100), and diluted retrieval (p<0.0001, N=200, 5x candidate expansion) — the heuristic significantly outperforms retrieving from all substrates. The advantage is robust across question types and grows in harder settings (Cohen's d from 0.22 to 0.49).
 
-These ten experiments identify two ceilings:
+**Line 2: Seven content-aware stopping mechanisms fail.** A cross-encoder, NLI bundle checker, learned classifier, LLM decomposition, answer-stability tracker, confidence-gated self-assessment, and embedding router all fail to improve on the heuristic. Root cause analysis reveals a common bottleneck: assessing evidence quality requires evaluating a **set function** over document bundles — a problem that current models cannot solve reliably. Each method introduces more noise (from approximation errors, distribution shift, parsing failures, or phrasing instability) than information.
 
-1. **A content-aware ceiling**: every content-based stopping signal tested introduces more noise (from set function approximation errors, distribution-specific correlations, parsing failures, or phrasing instability) than information. The cost of assessing evidence quality exceeds the value of the assessment.
+**Line 3: Three structural improvements converge.** Threshold optimization, novelty-based stopping, and dual-signal stopping all produce identical behavior, confirming source diversity is the **maximally informative zero-cost signal** — the structural ceiling.
 
-2. **A structural ceiling**: source diversity is the maximally informative zero-cost stopping signal. Grid search over 30 threshold configurations confirms the hand-tuned 2/2/0.4 parameters are near-optimal; novelty and relevance-convergence signals are redundant.
+A **boundary condition** applies: for computation tasks, tool-execution completion replaces source diversity as the optimal stopping signal. This cleanly separates the retrieval regime (where navigation and evidence gathering dominate) from the computation regime (where tool execution dominates).
 
-The heuristic sits at the intersection of these ceilings — the Pareto frontier of stopping quality vs. stopping cost. This connects to classical optimal stopping theory: threshold rules on low-noise observables dominate value-estimation approaches when the value function is hard to learn.
+Our contributions:
 
-Our contributions are:
+1. **The heterogeneous document navigation stopping problem** — a general formulation encompassing codebase search, enterprise retrieval, and QA as instances of the same stopping decision over multiple substrates (Section 3).
 
-1. **A Pareto-optimality result**: source-diversity stopping significantly outperforms comprehensive retrieval (p<0.0001, three benchmark families, Cohen's d up to 0.49) and is not improved by any of ten tested alternatives across seven design categories (Section 5).
+2. **Source-diversity stopping as a Pareto-optimal structural signal** — validated across five benchmarks, four substrate types, and three task families, with ten alternatives tested (Section 5).
 
-2. **Ten controlled failure analyses** identifying the content-aware ceiling (evidence quality is an intractable set function) and the structural ceiling (source diversity is the maximal zero-cost signal) that make the heuristic Pareto-optimal (Section 5.4, 5.11, 6.4).
+3. **The two-ceiling framework** — content-aware ceiling (noise > information) and structural ceiling (source diversity is maximal) — explaining why the heuristic resists improvement, grounded in optimal stopping theory (Section 6.4).
 
-3. **A reframing of adaptive retrieval stopping**: from a learning problem (train a better stopping model) to a signal-selection problem (identify the right structural observable), grounded in optimal stopping theory (Section 6.4).
+4. **The retrieval-computation boundary** — source diversity is optimal for retrieval/navigation; tool-execution completion is optimal for computation (Section 5).
 
-4. **Actionable design guidance**: practitioners should default to source-diversity stopping, invest in retrieval quality rather than stopping sophistication, and evaluate stopping mechanisms on out-of-distribution data (Section 6.4.7).
+5. **Mapping to codebase navigation** — where the same substrates (grep, embeddings, AST, import graphs) and stopping problem arise but no existing tool uses diversity-based stopping (Section 6).
