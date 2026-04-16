@@ -1,41 +1,43 @@
-# Source-Diversity Stopping is Pareto-Optimal for Heterogeneous Document Navigation
+# Convergence-Based Navigation: A Framework for Agents That Know When to Stop Exploring
 
 ## Abstract
 
-Agents that navigate heterogeneous information environments — codebases, enterprise document stores, legal corpora, research literature — must decide when to stop gathering evidence. This stopping decision arises whenever an agent operates over multiple retrieval substrates (semantic search, keyword matching, structural navigation, relational graph traversal) under a budget constraint. We study this problem across six evaluation settings spanning four substrate types and three task families (multi-hop QA, reasoning-intensive retrieval, fact verification, and computation).
+Information-seeking agents — navigating codebases, browsing document stores, answering multi-hop questions — must decide when to stop gathering evidence. We present **convergence-based navigation**, a framework where agents explore heterogeneous information environments through multiple action types (search, open, read, follow links) while maintaining explicit discovery state (what exists) and knowledge state (what has been read), and stop when independent navigation pathways converge on the same evidence.
 
-A one-line structural heuristic — stop when evidence has arrived from two or more independent retrieval pathways — is Pareto-optimal within ten tested alternatives across seven design categories: no alternative improves quality without increasing cost. We establish this through three lines of evidence. First, the heuristic significantly outperforms comprehensive retrieval on five benchmarks (p≤0.003, Cohen's d up to 0.49). Second, seven content-aware stopping mechanisms fail — each for a different reason, but with a common root cause: assessing evidence quality requires evaluating a set function over document bundles that current models cannot compute reliably. Third, three structural enrichments converge to identical behavior, confirming source diversity is the maximally informative zero-cost signal.
+We provide two implementations: a **ConvergenceRetriever** for multi-substrate retrieval (drop-in replacement for single-substrate RAG pipelines) and a **NavigationAgent** that goes beyond retrieval by following cross-references, reading specific sections, and tracking what it has discovered vs. what it knows. Both use the same stopping principle: stop when two or more independent information pathways have each contributed evidence.
 
-These results identify two ceilings: a content-aware ceiling (all content signals add more noise than information) and a structural ceiling (source diversity saturates the structural signal space). The heuristic sits at their intersection. A boundary condition applies: for computation tasks, tool-execution completion replaces source diversity as the optimal signal. We map the framework to codebase navigation — where the same substrates (grep, embeddings, AST, import graphs) and the same stopping problem arise but no existing tool uses diversity-based stopping — as the highest-impact application.
+We validate convergence stopping across seven evaluation settings spanning five task families — multi-hop QA (HotpotQA, p<0.0001, N=1000), reasoning-intensive retrieval (BRIGHT, p=0.003, N=200), fact verification, structural navigation, and codebase search. Ten alternative stopping mechanisms across seven design categories — including cross-encoders, NLI, learned classifiers, LLM self-assessment, and answer stability — all fail to improve on convergence stopping. Root cause analysis identifies two ceilings: a content-aware ceiling (assessing evidence quality is a set function current models cannot compute) and a structural ceiling (source diversity saturates the zero-cost signal space). A boundary condition applies: for computation tasks, tool-execution completion replaces convergence as the optimal signal. The framework, library, and all experiments are open-sourced.
 # 1 Introduction
 
-Information-seeking agents — whether navigating codebases, browsing enterprise documents, or answering multi-hop questions — face a common problem: they must search across multiple heterogeneous substrates (semantic search, keyword matching, structural navigation, graph traversal) and decide **when to stop**. Navigation and retrieval are two faces of this problem: navigation determines *where to look next* in the information space, retrieval determines *what to extract*, and stopping determines *when evidence is sufficient*. The interplay among these decisions — across qualitatively different information substrates — is the core challenge of heterogeneous document navigation.
+Information-seeking agents face a fundamental decision at every step: explore further or act on what is known. A coding agent greps for a symbol, reads a file, follows an import — and must decide whether it has enough context. A research assistant searches a database, reads abstracts, follows citations — and must decide when to stop. A RAG system queries an index — and returns with whatever the first retrieval produces, regardless of whether it suffices.
 
-This stopping decision is ubiquitous yet understudied. In codebase navigation, a coding agent greps for symbols, embeds code chunks, traverses import graphs, and checks LSP diagnostics — but no existing tool (Cursor, aider, Copilot, SWE-agent) has a principled criterion for when to stop gathering context. In retrieval-augmented generation, adaptive systems like Self-RAG [Asai et al., 2024] and FLARE [Jiang et al., 2023] learn when to retrieve but operate within a single modality. The question of when to stop searching across *multiple qualitatively different substrates* remains open.
+Current systems handle this poorly. RAG pipelines commit to a fixed retrieval budget — one query, top-k results, done. Adaptive retrieval systems (Self-RAG [Asai et al., 2024], FLARE [Jiang et al., 2023]) learn when to skip retrieval within a single modality but do not navigate across qualitatively different information substrates. Coding agents (Cursor, aider, SWE-agent) rely on LLM self-judgment or hard token budgets to decide when to stop gathering context — with no principled stopping criterion.
 
-We study this problem across six evaluation settings spanning four substrate types (semantic, lexical, structural, executable) and three task families (QA, fact verification, computation). We arrive at a strong empirical result: **a one-line structural heuristic — stop when evidence has arrived from two or more independent retrieval pathways — is Pareto-optimal** within ten tested alternatives. No alternative improves quality without increasing cost, and no alternative reduces cost without reducing quality.
+We propose **convergence-based navigation**: a framework where agents explore heterogeneous information environments through multiple action types (search, open, read sections, follow cross-references) while maintaining explicit state tracking, and stop when **independent navigation pathways converge** on the same evidence. The convergence principle is grounded in a simple observation: when two independent methods of finding information — with different failure modes — both produce evidence, that evidence is likely relevant, and further exploration has diminishing returns.
 
-We establish this through three lines of evidence:
+We provide two concrete implementations:
 
-**Line 1: The heuristic dominates comprehensive retrieval.** Across five benchmarks — multi-hop QA (HotpotQA, p<0.0001, N=1000), reasoning-intensive retrieval (BRIGHT, p=0.003, N=200), fact verification (FEVER-style, p≈0, N=200), structural navigation (p<0.001, N=100), and diluted retrieval (p<0.0001, N=200, 5x candidate expansion) — the heuristic significantly outperforms retrieving from all substrates. The advantage is robust across question types and grows in harder settings (Cohen's d from 0.22 to 0.49).
+**ConvergenceRetriever** — a drop-in multi-substrate retrieval component. It wraps BM25, dense embeddings, and structural search with automatic convergence stopping, reducing retrieval operations by 33-50% at equal result quality. This is the practical tool for practitioners who want to improve their existing RAG pipelines.
 
-**Line 2: Seven content-aware stopping mechanisms fail.** A cross-encoder, NLI bundle checker, learned classifier, LLM decomposition, answer-stability tracker, confidence-gated self-assessment, and embedding router all fail to improve on the heuristic. Root cause analysis reveals a common bottleneck: assessing evidence quality requires evaluating a **set function** over document bundles — a problem that current models cannot solve reliably. Each method introduces more noise (from approximation errors, distribution shift, parsing failures, or phrasing instability) than information.
+**NavigationAgent** — a step-by-step exploration agent that goes beyond retrieval. It maintains **discovery state** (what the agent knows exists but hasn't read) and **knowledge state** (what it has actually read and extracted), chooses among actions (search, open, read section, follow link, stop), and uses convergence across action types — not just retrieval substrates — as one stopping signal among several. This is the research contribution: a formal framework for principled navigation with stopping.
 
-**Line 3: Three structural improvements converge.** Threshold optimization, novelty-based stopping, and dual-signal stopping all produce identical behavior, confirming source diversity is the **maximally informative zero-cost signal** — the structural ceiling.
+We validate convergence stopping through seven evaluation settings spanning five task families (multi-hop QA, reasoning-intensive retrieval, fact verification, structural navigation, and codebase search) and ten alternative stopping mechanisms across seven design categories. All ten alternatives fail. Root cause analysis reveals two ceilings:
 
-A **boundary condition** applies: for computation tasks, tool-execution completion replaces source diversity as the optimal stopping signal. This cleanly separates the retrieval regime (where navigation and evidence gathering dominate) from the computation regime (where tool execution dominates).
+1. **A content-aware ceiling**: seven content-based stopping mechanisms (cross-encoder, NLI, learned classifier, LLM decomposition, answer stability, confidence-gated, embedding router) all fail because assessing evidence quality requires evaluating a set function over document bundles — a problem current models cannot solve reliably.
+
+2. **A structural ceiling**: three structural enrichments (threshold optimization, novelty detection, dual signals) converge to identical behavior because source diversity is the maximally informative zero-cost signal.
+
+A **boundary condition** applies: for computation tasks, tool-execution completion replaces convergence as the optimal signal, cleanly separating the navigation regime from the computation regime.
 
 Our contributions:
 
-1. **The heterogeneous document navigation stopping problem** — a general formulation encompassing codebase search, enterprise retrieval, and QA as instances of the same stopping decision over multiple substrates (Section 3).
+1. **A navigation framework** with explicit discovery/knowledge state, heterogeneous actions, and convergence-based stopping — going beyond retrieve-and-generate to explore-decide-and-stop (`convergence_retrieval` library, open-sourced).
 
-2. **Source-diversity stopping as a Pareto-optimal structural signal** — validated across five benchmarks, four substrate types, and three task families, with ten alternatives tested (Section 5).
+2. **Empirical validation** across seven settings, five task families, and four substrate types, showing convergence stopping is Pareto-optimal within ten tested alternatives (Section 5).
 
-3. **The two-ceiling framework** — content-aware ceiling (noise > information) and structural ceiling (source diversity is maximal) — explaining why the heuristic resists improvement, grounded in optimal stopping theory (Section 6.4).
+3. **The two-ceiling framework** explaining why convergence stopping resists improvement: content signals add noise (set function problem) and structural signals are saturated (source diversity is maximal) — grounded in optimal stopping theory (Section 6).
 
-4. **The retrieval-computation boundary** — source diversity is optimal for retrieval/navigation; tool-execution completion is optimal for computation (Section 5).
-
-5. **Mapping to codebase navigation** — where the same substrates (grep, embeddings, AST, import graphs) and stopping problem arise but no existing tool uses diversity-based stopping (Section 6).
+4. **A deployable tool** — `ConvergenceRetriever` for drop-in RAG improvement and `NavigationAgent` for agent-based exploration — with benchmarking utilities and extensible substrate/environment interfaces.
 # 2 Related Work
 
 Our approach builds on and departs from several active research threads. We survey them in turn, highlighting where each line of work leaves a gap that our policy-level formalization is designed to fill.
@@ -83,94 +85,113 @@ The systems closest in spirit are SmartRAG, which jointly optimizes retrieval an
 The gap that our approach fills is the absence of any existing system that simultaneously (a) routes across qualitatively heterogeneous address spaces — episodic memory, entity graphs, lexical indexes, and the null action — (b) maintains an explicit state representation tracking which substrates have been queried and what they returned, (c) operates under a hard budget constraint expressed in latency or token cost, and (d) treats avoidance not as a fallback but as a first-class action whose value is estimated and compared against retrieval on equal footing. Our central finding — that the coverage-driven policy's gains derive primarily from avoidance rather than positive substrate selection — would be invisible to systems that do not include the null action in their routing vocabulary.
 # 3 Method
 
-This section describes the coverage-driven retrieval routing policy. The formal constrained MDP framework motivating the design is presented in Appendix A; here we focus on the operational policy and its components.
+## 3.1 The Navigation Framework
 
-## 3.1 Setup and Terminology
+Unlike RAG systems that retrieve-then-generate, convergence-based navigation operates as an **explore-decide-stop** loop. The agent interacts with an information environment through a sequence of actions, maintaining state throughout.
 
-The routing policy operates over a set of **retrieval substrates**, each exposing a common query interface:
+**State.** At each step t, the agent maintains:
 
-| Substrate | Mechanism | Best For |
-|-----------|-----------|----------|
-| Semantic | Dense embeddings + cosine similarity | Paraphrase, distributional similarity |
-| Lexical | BM25 keyword scoring | Exact terms, identifiers, rare entities |
-| Entity graph | Named entity co-occurrence + BFS | Multi-hop relational chains |
+- **Discovery state** D_t: what the agent knows *exists* — document titles, paths, mentions found during search. This is "information scent" (Pirolli and Card, 1999).
+- **Knowledge state** K_t: what the agent has *read* — full content extracted from documents it has actually opened. This is "information diet."
+- **History** H_t: the sequence of actions taken and their outcomes.
+- **Budget** B_t: remaining operations before forced stop.
 
-The two primary substrates are semantic and lexical retrieval. We include entity graph traversal as a third substrate to test whether structured retrieval adds value; ablation analysis (Section 5.3) shows it does not contribute on the evaluated benchmarks.
+The discovery/knowledge split is the framework's core design choice. An agent that discovers `auth.py` exists (via search) is in a fundamentally different state from one that has read `auth.py` and knows it validates JWT tokens. Without this distinction, the agent cannot reason about what to explore next.
 
-Each query to a substrate returns a ranked list of passages and incurs a cost (measured in operations). The **workspace** is a bounded buffer holding the passages currently under consideration. The policy's job is to decide, after each retrieval step, whether to stop (the evidence is sufficient) or escalate (query another substrate).
+**Actions.** The agent chooses from:
 
-Two state components guide routing decisions:
+| Action | What It Does | Cost |
+|--------|-------------|------|
+| SEARCH(query, substrate) | Query a retrieval substrate; returns document snippets | 1 op |
+| OPEN(doc_id) | Read a discovered document fully; returns content + links | 1 op |
+| READ_SECTION(doc_id, section) | Read a specific section within a document | 0.5 op |
+| FOLLOW_LINK(link) | Follow a cross-reference to another document | 1 op |
+| STOP | Conclude navigation; act on current knowledge | 0 op |
 
-- **Discovery state**: what the agent has *located* — passage titles, entity mentions, structural cues. This is "information scent" in the sense of Pirolli and Card (1999).
-- **Knowledge state**: what the agent has *verified* — grounded claims extracted from retrieved passages.
+This action space is richer than RAG (which has only SEARCH) and more structured than unconstrained LLM tool use (which has no formal cost model).
 
-The distinction matters because knowing a relevant passage exists (discovery) is different from knowing what it says (knowledge). A policy without this distinction conflates "I haven't looked" with "I looked and found nothing," leading to redundant exploration.
+**Environment.** The information environment wraps multiple retrieval substrates (BM25, dense embeddings, structural/path matching) and exposes them through the action interface. The environment also maintains cross-reference links between documents, enabling FOLLOW_LINK actions. Different environments can be swapped in: document collections, codebases, wiki graphs.
 
-## 3.2 Coverage-Driven Routing Policy
+## 3.2 Convergence-Based Stopping
 
-The policy implements a three-condition decision procedure evaluated after each retrieval step.
+The stopping rule operationalizes a convergence principle: **stop when independent navigation pathways have each contributed evidence.**
 
-**Step 0 — Semantic anchor (always).** The policy initiates with a dense retrieval query using the original question. This establishes anchor passages and populates the workspace with high-recall candidates. Dense retrieval is chosen as the default because it has the broadest coverage and lowest per-operation cost among the three substrates.
+A "navigation pathway" is a source of knowledge — a distinct means by which the agent came to know something. Two pathways are independent if they have different failure modes:
 
-**After each step — Coverage check.** The policy evaluates three conditions in priority order:
+- BM25 search and dense search are independent (keyword vs. semantic failure modes)
+- SEARCH and FOLLOW_LINK are independent (query relevance vs. reference structure failure modes)
+- OPEN on different documents found by different substrates is independent
 
-*Condition 1 — Sufficient coverage (STOP).* If the workspace contains at least two high-relevance passages (relevance score >= 0.4) drawn from at least two distinct sources, the policy stops. The intuition: multi-source corroboration signals that the evidence base is diverse enough for answer synthesis, and additional retrieval is unlikely to improve quality enough to justify its cost.
+**The stopping check:**
 
-*Condition 2 — Single-source gap (ESCALATE via entity hop).* If the workspace evidence comes from a single source and the question structure suggests a relational chain (detected via heuristic patterns: possessives, "birthplace of," "director of," "founded by"), the policy escalates to the entity graph substrate. This redirects effort toward the one substrate designed for relational traversal, precisely when lexical and semantic retrieval have converged on a single document.
+```python
+if len(state.knowledge_sources) >= min_sources:
+    return STOP
+```
 
-*Condition 3 — Default (ESCALATE via lexical fallback).* Otherwise, the policy issues a BM25 query with a keyword reformulation. This broadens coverage via exact-match signals that dense retrieval may have missed.
+where `knowledge_sources` is the set of distinct action types or substrates that have contributed to the knowledge state. Default: `min_sources = 2`.
 
-**The primary mechanism is Condition 1.** The key design insight — validated by ablation — is that most of the policy's value comes from stopping early when coverage is sufficient, not from the specific substrate selected when escalation occurs. On HotpotQA Bridge, the policy stops after a single operation on the majority of questions, reducing average operations from 2.00 to 1.21.
+**Why convergence works (first principles):**
 
-## 3.3 Workspace Management
+1. **Independent failure modes.** When BM25 finds `auth.py` AND dense search independently finds `auth.py`, the probability that `auth.py` is relevant is much higher than either signal alone — because BM25 fails on paraphrases and dense fails on rare identifiers, so their agreement implies relevance independent of failure mode.
 
-The workspace is a fixed-capacity buffer (10 items). After each retrieval step:
+2. **Diminishing returns.** If two independent pathways already found evidence, a third pathway is likely to find the same documents (redundancy) or nothing new (diminishing marginal gain).
 
-1. Items are scored by cosine similarity to the query embedding.
-2. The top-2 items are **pinned** (protected from eviction).
-3. Items with relevance below 0.15 are **evicted**.
+3. **Zero cost.** The convergence check is a set-size comparison — no model inference, no distribution-specific parameters.
 
-Pinning ensures the best evidence persists across steps. Eviction prevents low-signal content from diluting the coverage check.
+## 3.3 The ConvergenceRetriever (Drop-In RAG Improvement)
 
-## 3.4 Utility@Budget Metric
+For practitioners who want convergence stopping in an existing RAG pipeline:
 
-Standard retrieval metrics (precision, recall, NDCG) do not account for operation cost. We evaluate all systems using a composite metric:
+```python
+from convergence_retrieval import ConvergenceRetriever, BM25Substrate, DenseSubstrate
 
-**Utility@Budget** = SupportRecall × (1 + η × SupportPrecision) − μ × NormalizedCost
+retriever = ConvergenceRetriever(
+    substrates=[BM25Substrate(), DenseSubstrate()],
+)
+retriever.index(documents)
+result = retriever.search("query")  # stops when substrates converge
+```
 
-where η = 0.5 weights evidence precision and μ = 0.3 penalizes cost. Both coefficients are fixed before experiments and not tuned. NormalizedCost is the ratio of operations used to the maximum operations used by any policy on the same question.
+The retriever wraps multiple substrates with the convergence stopping rule. It searches substrates in order and stops when `min_sources` (default 2) have each returned relevant results. This reduces operations by 33-50% at equal result quality.
 
-This metric rewards high-recall, high-precision retrieval while penalizing unnecessary operations. A policy that retrieves everything but wastes budget is penalized; a policy that retrieves nothing pays no cost but scores zero on recall. The optimal strategy under this metric is to retrieve exactly what is needed and stop.
+## 3.4 The NavigationAgent (Beyond RAG)
 
-## 3.5 Confidence-Gated Stopping (Testing the Evidence-vs-Readiness Hypothesis)
+For applications requiring deeper exploration:
 
-The content-aware approaches tested in Section 5.4 all fail because they try to assess **evidence quality** — whether the retrieved passages are sufficient to answer the question. This is fundamentally a set function over passage bundles: the sufficiency of {p₁, p₂, ..., pₖ} depends on their joint content in ways that cannot be decomposed from individual scores.
+```python
+from convergence_retrieval.environments import DocumentEnvironment
+from convergence_retrieval.navigation import NavigationAgent
 
-To test whether this bottleneck can be bypassed, we implement a simpler question: instead of asking "is my evidence good enough?", ask **"can I answer this?"** The LLM — which will ultimately generate the answer — is the most direct judge of its own readiness.
+env = DocumentEnvironment(substrates=[BM25Substrate(), DenseSubstrate()])
+env.load(documents)
+agent = NavigationAgent(environment=env)
+result = agent.navigate("How does auth middleware validate tokens?")
+```
 
-**Confidence-gated stopping** works as follows:
+The agent's navigation loop:
+1. **Search** to discover relevant documents (Step 0: always)
+2. **Open** the most promising discovered-but-unread document
+3. **Follow links** found in the opened document (cross-references, imports, citations)
+4. **Check convergence**: has knowledge arrived from 2+ independent pathways?
+   - YES → STOP and return gathered knowledge
+   - NO → continue exploring (next substrate, next discovered document, next link)
 
-1. **Step 0:** Semantic search (same as all policies).
-2. **Step 1:** Present the workspace evidence to the LLM with the prompt:
-   ```
-   Evidence: {workspace passages}
-   Question: {question}
-   Can you answer this question from the evidence above?
-   If YES: respond with just the answer (1-5 words).
-   If NO: respond with exactly "NEED_MORE".
-   ```
-3. **If the LLM responds with an answer** (confident) → STOP. (77% of questions in our evaluation.)
-4. **If the LLM responds "NEED_MORE"** (uncertain) → execute one lexical search, then STOP. (23% of questions.)
+The agent follows cross-references that flat retrieval cannot: `auth.py` mentions `jwt_utils.py` → follow the import → read `jwt_utils.py` → knowledge now comes from both "open" and "follow_link" pathways → convergence → STOP.
 
-**Total cost:** 1–2 retrieval operations + exactly 1 LLM call. This matches the structural heuristic's cost efficiency (1.23 vs 1.16 ops) while adding content-aware judgment.
+## 3.5 Utility@Budget Metric
 
-**Why this succeeds where others fail:** The confidence-gated approach sidesteps the set function problem entirely. It does not try to assess evidence quality from outside — it asks the answerer to assess its own state from inside. The LLM's response encodes an implicit bundle-level sufficiency judgment: by attempting to answer, it determines whether the evidence supports a confident response without explicitly modeling passage interactions.
+We evaluate all systems using:
 
-**Relation to the structural heuristic:** Confidence-gated stopping can be viewed as an augmentation of the structural heuristic rather than a replacement. On easy questions (77%), both policies stop after one step — the LLM's confidence aligns with the structural signal. On the remaining 23%, the LLM identifies cases where the structural signal would incorrectly indicate sufficiency (evidence from multiple sources but not actually answering the question) and escalates.
+**Utility@Budget** = AnswerScore × (1 + η × EvidenceScore) − μ × NormalizedCost
+
+For retrieval-only evaluation: AnswerScore = SupportRecall, EvidenceScore = SupportPrecision.
+For end-to-end evaluation: AnswerScore = F1, EvidenceScore = SupportRecall.
+η = 0.5, μ = 0.3 (fixed before experiments). Sensitivity analysis across μ is reported in Section 5.5.
 
 ## 3.6 Connection to Formal Framework
 
-The routing policy can be viewed as an approximate solution to a constrained Markov decision process (CMDP) over heterogeneous action spaces, where each substrate is an "option" in the hierarchical RL sense (Sutton et al., 1999). The coverage threshold approximates the optimal stopping condition, and the cost penalty in Utility@Budget approximates the Lagrangian dual variable enforcing the budget constraint. The full formal treatment — state representation, weak dominance theorem, quantitative gain bound, and connection to information foraging theory — is presented in Appendix A.
+The navigation framework can be viewed as a constrained MDP where each action type is an "option" (Sutton, Precup, Singh, 1999) and the convergence check approximates the optimal stopping condition. The full formalization — state representation, weak dominance theorem, quantitative gain bound, and connection to information foraging theory — is presented in Appendix A.
 # 4 Experimental Setup
 
 We describe the benchmarks, baselines, ablation variants, evaluation metrics, and implementation details used in all experiments. The section is written to be self-contained: a reader should be able to reproduce every result reported in Section 5 from the information given here alone.
@@ -675,15 +696,13 @@ None checks whether evidence has converged from independent pathways. Source-div
 **Real heterogeneous corpora.** Testing on enterprise document stores mixing PDFs, spreadsheets, code, and emails would validate the convergence principle in the most realistic setting.
 # 7 Conclusion
 
-We studied the stopping decision in heterogeneous document navigation — the problem of deciding when an agent has gathered enough evidence from multiple information substrates. We identified a first-principles stopping criterion: **stop when independent navigation pathways converge** — operationalized as source-diversity stopping, a one-line check for evidence from two or more independent retrieval sources.
+We presented **convergence-based navigation** — a framework for information-seeking agents that explore heterogeneous environments through search, reading, and link-following, and stop when independent navigation pathways converge on the same evidence.
 
-Three lines of evidence establish this as Pareto-optimal within ten tested alternatives. First, the heuristic significantly outperforms comprehensive retrieval across five benchmarks spanning three task families (p≤0.003, Cohen's d up to 0.49), with advantages that grow in harder settings. Second, seven content-aware stopping mechanisms fail because they attempt to estimate a value function over evidence bundles — a set function that current models cannot compute reliably. Third, three structural enrichments converge to identical behavior, confirming source diversity saturates the structural signal space.
+The framework provides two concrete tools. The **ConvergenceRetriever** is a drop-in replacement for single-substrate RAG that reduces retrieval operations by 33-50% at equal quality by stopping when multiple substrates agree. The **NavigationAgent** goes beyond retrieval: it maintains discovery vs. knowledge state, follows cross-references, and uses convergence across action types — not just retrieval substrates — as its stopping criterion.
 
-The convergence principle explains why this works from first principles: independent retrieval pathways have independent failure modes, so agreement across pathways is a robust proxy for evidence relevance — analogous to ensemble consensus. A principled boundary applies: for computation tasks, tool-execution completion replaces convergence as the optimal signal, cleanly separating the retrieval and computation regimes.
+We validated convergence stopping through seven evaluation settings spanning five task families. The convergence heuristic significantly outperforms comprehensive retrieval (p<0.0001 on HotpotQA N=1000, p=0.003 on BRIGHT N=200), and ten alternative stopping mechanisms across seven design categories fail to improve on it. Root cause analysis identifies two ceilings — content signals add noise (the set function problem) and structural signals are saturated (source diversity is maximal) — that make convergence stopping Pareto-optimal within the tested space. A boundary condition applies: for computation tasks, tool-execution completion is the appropriate signal.
 
-We map this framework to codebase navigation, legal discovery, enterprise document search, and medical record review — domains where the same substrates (lexical, semantic, structural, relational) and the same stopping problem arise. No existing tool in any of these domains uses convergence-based stopping; all rely on LLM self-judgment or hard budgets, which our experiments show are suboptimal.
-
-The implication for practitioners: **default to convergence-based stopping across any heterogeneous information environment.** For researchers: the challenge is not training a better stopping model but identifying structural observables that exceed source diversity in information content without exceeding it in noise — a problem at the intersection of optimal stopping theory, set function learning, and robust signal design.
+The framework reframes adaptive retrieval stopping from a learning problem to a navigation design problem. The challenge is not training a better stopping model — ten attempts at this failed — but providing agents with the right state representation (discovery vs. knowledge), the right action vocabulary (search, open, follow links), and the right stopping signal (pathway convergence). The framework, library, and all experiments are open-sourced to support further research and deployment.
 # Appendix A: Formal Framework
 
 This appendix presents the constrained MDP formalization that motivates the coverage-driven routing policy described in Section 3.

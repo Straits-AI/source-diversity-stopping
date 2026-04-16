@@ -1,90 +1,109 @@
 # 3 Method
 
-This section describes the coverage-driven retrieval routing policy. The formal constrained MDP framework motivating the design is presented in Appendix A; here we focus on the operational policy and its components.
+## 3.1 The Navigation Framework
 
-## 3.1 Setup and Terminology
+Unlike RAG systems that retrieve-then-generate, convergence-based navigation operates as an **explore-decide-stop** loop. The agent interacts with an information environment through a sequence of actions, maintaining state throughout.
 
-The routing policy operates over a set of **retrieval substrates**, each exposing a common query interface:
+**State.** At each step t, the agent maintains:
 
-| Substrate | Mechanism | Best For |
-|-----------|-----------|----------|
-| Semantic | Dense embeddings + cosine similarity | Paraphrase, distributional similarity |
-| Lexical | BM25 keyword scoring | Exact terms, identifiers, rare entities |
-| Entity graph | Named entity co-occurrence + BFS | Multi-hop relational chains |
+- **Discovery state** D_t: what the agent knows *exists* — document titles, paths, mentions found during search. This is "information scent" (Pirolli and Card, 1999).
+- **Knowledge state** K_t: what the agent has *read* — full content extracted from documents it has actually opened. This is "information diet."
+- **History** H_t: the sequence of actions taken and their outcomes.
+- **Budget** B_t: remaining operations before forced stop.
 
-The two primary substrates are semantic and lexical retrieval. We include entity graph traversal as a third substrate to test whether structured retrieval adds value; ablation analysis (Section 5.3) shows it does not contribute on the evaluated benchmarks.
+The discovery/knowledge split is the framework's core design choice. An agent that discovers `auth.py` exists (via search) is in a fundamentally different state from one that has read `auth.py` and knows it validates JWT tokens. Without this distinction, the agent cannot reason about what to explore next.
 
-Each query to a substrate returns a ranked list of passages and incurs a cost (measured in operations). The **workspace** is a bounded buffer holding the passages currently under consideration. The policy's job is to decide, after each retrieval step, whether to stop (the evidence is sufficient) or escalate (query another substrate).
+**Actions.** The agent chooses from:
 
-Two state components guide routing decisions:
+| Action | What It Does | Cost |
+|--------|-------------|------|
+| SEARCH(query, substrate) | Query a retrieval substrate; returns document snippets | 1 op |
+| OPEN(doc_id) | Read a discovered document fully; returns content + links | 1 op |
+| READ_SECTION(doc_id, section) | Read a specific section within a document | 0.5 op |
+| FOLLOW_LINK(link) | Follow a cross-reference to another document | 1 op |
+| STOP | Conclude navigation; act on current knowledge | 0 op |
 
-- **Discovery state**: what the agent has *located* — passage titles, entity mentions, structural cues. This is "information scent" in the sense of Pirolli and Card (1999).
-- **Knowledge state**: what the agent has *verified* — grounded claims extracted from retrieved passages.
+This action space is richer than RAG (which has only SEARCH) and more structured than unconstrained LLM tool use (which has no formal cost model).
 
-The distinction matters because knowing a relevant passage exists (discovery) is different from knowing what it says (knowledge). A policy without this distinction conflates "I haven't looked" with "I looked and found nothing," leading to redundant exploration.
+**Environment.** The information environment wraps multiple retrieval substrates (BM25, dense embeddings, structural/path matching) and exposes them through the action interface. The environment also maintains cross-reference links between documents, enabling FOLLOW_LINK actions. Different environments can be swapped in: document collections, codebases, wiki graphs.
 
-## 3.2 Coverage-Driven Routing Policy
+## 3.2 Convergence-Based Stopping
 
-The policy implements a three-condition decision procedure evaluated after each retrieval step.
+The stopping rule operationalizes a convergence principle: **stop when independent navigation pathways have each contributed evidence.**
 
-**Step 0 — Semantic anchor (always).** The policy initiates with a dense retrieval query using the original question. This establishes anchor passages and populates the workspace with high-recall candidates. Dense retrieval is chosen as the default because it has the broadest coverage and lowest per-operation cost among the three substrates.
+A "navigation pathway" is a source of knowledge — a distinct means by which the agent came to know something. Two pathways are independent if they have different failure modes:
 
-**After each step — Coverage check.** The policy evaluates three conditions in priority order:
+- BM25 search and dense search are independent (keyword vs. semantic failure modes)
+- SEARCH and FOLLOW_LINK are independent (query relevance vs. reference structure failure modes)
+- OPEN on different documents found by different substrates is independent
 
-*Condition 1 — Sufficient coverage (STOP).* If the workspace contains at least two high-relevance passages (relevance score >= 0.4) drawn from at least two distinct sources, the policy stops. The intuition: multi-source corroboration signals that the evidence base is diverse enough for answer synthesis, and additional retrieval is unlikely to improve quality enough to justify its cost.
+**The stopping check:**
 
-*Condition 2 — Single-source gap (ESCALATE via entity hop).* If the workspace evidence comes from a single source and the question structure suggests a relational chain (detected via heuristic patterns: possessives, "birthplace of," "director of," "founded by"), the policy escalates to the entity graph substrate. This redirects effort toward the one substrate designed for relational traversal, precisely when lexical and semantic retrieval have converged on a single document.
+```python
+if len(state.knowledge_sources) >= min_sources:
+    return STOP
+```
 
-*Condition 3 — Default (ESCALATE via lexical fallback).* Otherwise, the policy issues a BM25 query with a keyword reformulation. This broadens coverage via exact-match signals that dense retrieval may have missed.
+where `knowledge_sources` is the set of distinct action types or substrates that have contributed to the knowledge state. Default: `min_sources = 2`.
 
-**The primary mechanism is Condition 1.** The key design insight — validated by ablation — is that most of the policy's value comes from stopping early when coverage is sufficient, not from the specific substrate selected when escalation occurs. On HotpotQA Bridge, the policy stops after a single operation on the majority of questions, reducing average operations from 2.00 to 1.21.
+**Why convergence works (first principles):**
 
-## 3.3 Workspace Management
+1. **Independent failure modes.** When BM25 finds `auth.py` AND dense search independently finds `auth.py`, the probability that `auth.py` is relevant is much higher than either signal alone — because BM25 fails on paraphrases and dense fails on rare identifiers, so their agreement implies relevance independent of failure mode.
 
-The workspace is a fixed-capacity buffer (10 items). After each retrieval step:
+2. **Diminishing returns.** If two independent pathways already found evidence, a third pathway is likely to find the same documents (redundancy) or nothing new (diminishing marginal gain).
 
-1. Items are scored by cosine similarity to the query embedding.
-2. The top-2 items are **pinned** (protected from eviction).
-3. Items with relevance below 0.15 are **evicted**.
+3. **Zero cost.** The convergence check is a set-size comparison — no model inference, no distribution-specific parameters.
 
-Pinning ensures the best evidence persists across steps. Eviction prevents low-signal content from diluting the coverage check.
+## 3.3 The ConvergenceRetriever (Drop-In RAG Improvement)
 
-## 3.4 Utility@Budget Metric
+For practitioners who want convergence stopping in an existing RAG pipeline:
 
-Standard retrieval metrics (precision, recall, NDCG) do not account for operation cost. We evaluate all systems using a composite metric:
+```python
+from convergence_retrieval import ConvergenceRetriever, BM25Substrate, DenseSubstrate
 
-**Utility@Budget** = SupportRecall × (1 + η × SupportPrecision) − μ × NormalizedCost
+retriever = ConvergenceRetriever(
+    substrates=[BM25Substrate(), DenseSubstrate()],
+)
+retriever.index(documents)
+result = retriever.search("query")  # stops when substrates converge
+```
 
-where η = 0.5 weights evidence precision and μ = 0.3 penalizes cost. Both coefficients are fixed before experiments and not tuned. NormalizedCost is the ratio of operations used to the maximum operations used by any policy on the same question.
+The retriever wraps multiple substrates with the convergence stopping rule. It searches substrates in order and stops when `min_sources` (default 2) have each returned relevant results. This reduces operations by 33-50% at equal result quality.
 
-This metric rewards high-recall, high-precision retrieval while penalizing unnecessary operations. A policy that retrieves everything but wastes budget is penalized; a policy that retrieves nothing pays no cost but scores zero on recall. The optimal strategy under this metric is to retrieve exactly what is needed and stop.
+## 3.4 The NavigationAgent (Beyond RAG)
 
-## 3.5 Confidence-Gated Stopping (Testing the Evidence-vs-Readiness Hypothesis)
+For applications requiring deeper exploration:
 
-The content-aware approaches tested in Section 5.4 all fail because they try to assess **evidence quality** — whether the retrieved passages are sufficient to answer the question. This is fundamentally a set function over passage bundles: the sufficiency of {p₁, p₂, ..., pₖ} depends on their joint content in ways that cannot be decomposed from individual scores.
+```python
+from convergence_retrieval.environments import DocumentEnvironment
+from convergence_retrieval.navigation import NavigationAgent
 
-To test whether this bottleneck can be bypassed, we implement a simpler question: instead of asking "is my evidence good enough?", ask **"can I answer this?"** The LLM — which will ultimately generate the answer — is the most direct judge of its own readiness.
+env = DocumentEnvironment(substrates=[BM25Substrate(), DenseSubstrate()])
+env.load(documents)
+agent = NavigationAgent(environment=env)
+result = agent.navigate("How does auth middleware validate tokens?")
+```
 
-**Confidence-gated stopping** works as follows:
+The agent's navigation loop:
+1. **Search** to discover relevant documents (Step 0: always)
+2. **Open** the most promising discovered-but-unread document
+3. **Follow links** found in the opened document (cross-references, imports, citations)
+4. **Check convergence**: has knowledge arrived from 2+ independent pathways?
+   - YES → STOP and return gathered knowledge
+   - NO → continue exploring (next substrate, next discovered document, next link)
 
-1. **Step 0:** Semantic search (same as all policies).
-2. **Step 1:** Present the workspace evidence to the LLM with the prompt:
-   ```
-   Evidence: {workspace passages}
-   Question: {question}
-   Can you answer this question from the evidence above?
-   If YES: respond with just the answer (1-5 words).
-   If NO: respond with exactly "NEED_MORE".
-   ```
-3. **If the LLM responds with an answer** (confident) → STOP. (77% of questions in our evaluation.)
-4. **If the LLM responds "NEED_MORE"** (uncertain) → execute one lexical search, then STOP. (23% of questions.)
+The agent follows cross-references that flat retrieval cannot: `auth.py` mentions `jwt_utils.py` → follow the import → read `jwt_utils.py` → knowledge now comes from both "open" and "follow_link" pathways → convergence → STOP.
 
-**Total cost:** 1–2 retrieval operations + exactly 1 LLM call. This matches the structural heuristic's cost efficiency (1.23 vs 1.16 ops) while adding content-aware judgment.
+## 3.5 Utility@Budget Metric
 
-**Why this succeeds where others fail:** The confidence-gated approach sidesteps the set function problem entirely. It does not try to assess evidence quality from outside — it asks the answerer to assess its own state from inside. The LLM's response encodes an implicit bundle-level sufficiency judgment: by attempting to answer, it determines whether the evidence supports a confident response without explicitly modeling passage interactions.
+We evaluate all systems using:
 
-**Relation to the structural heuristic:** Confidence-gated stopping can be viewed as an augmentation of the structural heuristic rather than a replacement. On easy questions (77%), both policies stop after one step — the LLM's confidence aligns with the structural signal. On the remaining 23%, the LLM identifies cases where the structural signal would incorrectly indicate sufficiency (evidence from multiple sources but not actually answering the question) and escalates.
+**Utility@Budget** = AnswerScore × (1 + η × EvidenceScore) − μ × NormalizedCost
+
+For retrieval-only evaluation: AnswerScore = SupportRecall, EvidenceScore = SupportPrecision.
+For end-to-end evaluation: AnswerScore = F1, EvidenceScore = SupportRecall.
+η = 0.5, μ = 0.3 (fixed before experiments). Sensitivity analysis across μ is reported in Section 5.5.
 
 ## 3.6 Connection to Formal Framework
 
-The routing policy can be viewed as an approximate solution to a constrained Markov decision process (CMDP) over heterogeneous action spaces, where each substrate is an "option" in the hierarchical RL sense (Sutton et al., 1999). The coverage threshold approximates the optimal stopping condition, and the cost penalty in Utility@Budget approximates the Lagrangian dual variable enforcing the budget constraint. The full formal treatment — state representation, weak dominance theorem, quantitative gain bound, and connection to information foraging theory — is presented in Appendix A.
+The navigation framework can be viewed as a constrained MDP where each action type is an "option" (Sutton, Precup, Singh, 1999) and the convergence check approximates the optimal stopping condition. The full formalization — state representation, weak dominance theorem, quantitative gain bound, and connection to information foraging theory — is presented in Appendix A.
