@@ -25,6 +25,8 @@ from .substrates.bm25 import BM25Substrate
 from .substrates.dense import DenseSubstrate
 from .substrates.structural import StructuralSubstrate
 from .substrates.base import Substrate
+from .navigation import NavigationAgent, ConvergencePolicy, NavigationState
+from .environments import DocumentEnvironment
 
 __all__ = [
     "ConvergenceRetriever",
@@ -32,4 +34,8 @@ __all__ = [
     "DenseSubstrate",
     "StructuralSubstrate",
     "Substrate",
+    "NavigationAgent",
+    "ConvergencePolicy",
+    "NavigationState",
+    "DocumentEnvironment",
 ]

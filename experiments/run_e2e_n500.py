@@ -68,12 +68,12 @@ API_CALL_DELAY = 0.1          # seconds between API calls (AnswerGenerator adds 
 RESULTS_DIR = Path(__file__).resolve().parent / "results"
 RESULTS_FILE = RESULTS_DIR / "e2e_n500.json"
 MODELS_DIR = Path(__file__).resolve().parent / "models"
-STOPPING_MODEL_PATH = MODELS_DIR / "stopping_classifier.pkl"
+STOPPING_MODEL_PATH = MODELS_DIR / "stopping_classifier_clean.pkl"
 
 # Set API key
 os.environ.setdefault(
     "OPENROUTER_API_KEY",
-    "REPLACE_WITH_YOUR_OPENROUTER_API_KEY",
+    "",
 )
 
 # ── Policies for retrieval-only phase ────────────────────────────────────────

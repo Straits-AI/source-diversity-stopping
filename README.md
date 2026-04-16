@@ -1,4 +1,4 @@
-# Source-Diversity Stopping is Pareto-Optimal for Multi-Substrate Retrieval
+# Convergence-Based Navigation: A Framework for Agents That Know When to Stop Exploring
 
 **Paper:** "Source-Diversity Stopping is Pareto-Optimal for Multi-Substrate Retrieval"  
 **Status:** Ready for EMNLP 2026 submission (deadline May 25)  
@@ -38,6 +38,70 @@ Heuristic sits at the intersection = Pareto frontier
 | HotpotQA E2E (with LLM) | End-to-end | 500 | 0.021 | 0.103 |
 | **FEVER (fact verification)** | **Non-QA classification** | **200** | **<0.0001** | **(Pareto)** |
 
+## `convergence_retrieval` Library
+
+The `convergence_retrieval` package provides the core framework as an importable library.
+
+### Installation
+
+```bash
+pip install -e .
+```
+
+### Basic Usage
+
+```python
+from convergence_retrieval import ConvergenceRetriever, BM25Substrate, DenseSubstrate
+
+retriever = ConvergenceRetriever(
+    substrates=[
+        BM25Substrate(),
+        DenseSubstrate(model="all-MiniLM-L6-v2"),
+    ],
+)
+retriever.index(documents)
+results = retriever.search("How does auth work?")
+# Returns results in ~1.2 operations instead of 2.0
+```
+
+### NavigationAgent Usage
+
+```python
+from convergence_retrieval import NavigationAgent, ConvergencePolicy, NavigationState
+from convergence_retrieval import DocumentEnvironment
+
+env = DocumentEnvironment(documents)
+policy = ConvergencePolicy(min_sources=2)
+agent = NavigationAgent(policy=policy)
+
+state = NavigationState()
+result = agent.run(query="What is the capital of France?", env=env, state=state)
+# Agent stops as soon as evidence from 2+ independent sources is found
+```
+
+### Library Structure
+
+```
+convergence_retrieval/
+  __init__.py               # Top-level exports
+  retriever.py              # ConvergenceRetriever
+  substrates/
+    base.py                 # Substrate ABC
+    bm25.py                 # BM25Substrate
+    dense.py                # DenseSubstrate
+    structural.py           # StructuralSubstrate
+  navigation/
+    agent.py                # NavigationAgent
+    policy.py               # NavigationPolicy, ConvergencePolicy
+    state.py                # NavigationState
+    actions.py              # Action, ActionType, ActionResult
+  environments/
+    base.py                 # Environment ABC
+    document_env.py         # DocumentEnvironment
+  tests/
+    test_retriever.py
+```
+
 ## Repository Structure
 
 ```
@@ -52,6 +116,8 @@ paper/                          # Paper sections + assembled full-paper.md (10,3
   07-conclusion.md              # Three findings + implications
   appendix-a-formal-framework.md # CMDP formalization
   full-paper.md                 # Assembled paper
+
+convergence_retrieval/          # Importable library (see above)
 
 experiments/
   aea/                          # Core framework
@@ -81,11 +147,6 @@ experiments/
     tool_execution.json         # A_tool experiment results
     codebase_nav.json           # Codebase navigation experiment (code-search generalisation)
   run_*.py                      # Experiment runners (reproducible)
-  run_fever.py                  # FEVER fact verification: generalisation beyond QA
-  run_codebase_nav.py           # Codebase navigation: code-search generalisation (no API)
-  run_tool_execution.py         # A_tool experiment: executable substrate vs source diversity
-  collect_trajectories.py       # Trajectory data collection
-  train_stopping_model.py       # Classifier training
 
 deprecated/                     # Superseded files kept for reference
   experiments/                  # Early runners (run_heterogeneous_benchmark, run_llm_routed,
@@ -127,35 +188,95 @@ pip install openai
 export OPENROUTER_API_KEY="your_key_here"  # Required for LLM answer generation only
 ```
 
-### Key Experiments
+### All Experiments
+
+#### Core Retrieval (no API key required)
 
 ```bash
-# Core result: heuristic vs baselines on HotpotQA (retrieval-only, no API needed)
+# Core result: heuristic vs baselines on HotpotQA (retrieval-only)
 python experiments/run_full_hotpotqa.py
 
-# Diluted retrieval (50 paragraphs, no API needed)
+# HotpotQA baselines only
+python experiments/run_hotpotqa_baselines.py
+
+# Diluted retrieval (50 paragraphs)
 python experiments/run_open_domain.py
 
-# BRIGHT benchmark (no API needed for retrieval-only)
+# BRIGHT benchmark (retrieval-only)
 python experiments/run_bright.py
 
-# E2E with LLM answers (requires OPENROUTER_API_KEY)
-python experiments/run_confidence_gated_n500.py
-
-# Structural improvements (no API needed)
+# Structural improvements (threshold tuning, novelty detection, dual-signal)
 python experiments/run_structural_improvements.py
 
+# Ablation study (5 ablation variants of the heuristic)
+python experiments/run_ablations.py
+
+# Heterogeneous benchmark v2
+python experiments/run_heterogeneous_v2.py
+
+# Multi-seed reproducibility
+python experiments/run_multiseed.py
+```
+
+#### Domain Generalisation (no API key required)
+
+```bash
 # Structural navigation address space (A_struct) — title-hierarchy browsing
 python experiments/run_structural_nav.py
 
-# Tool execution address space (A_tool) — does executable addressing change stopping?
+# Tool execution address space (A_tool) — executable substrate vs source diversity
 python experiments/run_tool_execution.py
 
-# FEVER fact verification — does stopping generalise beyond QA tasks? (no API needed)
+# FEVER fact verification — stopping generalises beyond QA tasks
 python experiments/run_fever.py
 
-# Codebase navigation — does stopping generalise to code search? (no API needed)
+# Codebase navigation — stopping generalises to code search
 python experiments/run_codebase_nav.py
+```
+
+#### Content-Aware Stopping (requires OPENROUTER_API_KEY)
+
+```bash
+# E2E with LLM answers on N=500 HotpotQA (heuristic + confidence-gated)
+python experiments/run_e2e_n500.py
+
+# Confidence-gated on N=500 (extended confidence-gated evaluation)
+python experiments/run_confidence_gated_n500.py
+
+# Confidence-gated on BRIGHT
+python experiments/run_confidence_gated_bright.py
+
+# Confidence-gated evaluation (smaller N)
+python experiments/run_confidence_gated_eval.py
+
+# NLI stopping (DeBERTa-v3)
+python experiments/run_nli_stopping_eval.py
+
+# Answer stability stopping (draft convergence)
+python experiments/run_answer_stability_eval.py
+
+# LLM decomposition stopping
+python experiments/run_decomposition_eval.py
+
+# Cross-encoder stopping (MS MARCO)
+python experiments/run_cross_encoder_eval.py
+
+# Embedding router (question classifier)
+python experiments/run_embedding_router_eval.py
+
+# Learned stopping (GBT classifier)
+python experiments/run_learned_stopping.py
+
+# 2WikiMultihopQA evaluation
+python experiments/run_2wiki.py
+```
+
+#### Training
+
+```bash
+# Train the GBT stopping classifier (requires trajectory data)
+python experiments/collect_trajectories.py
+python experiments/train_stopping_model.py
 ```
 
 ### Train/Test Split
@@ -241,8 +362,8 @@ Results: `experiments/results/fever.json` | Script: `experiments/run_fever.py`
 ## Citation
 
 ```bibtex
-@article{source-diversity-stopping-2026,
-  title={Source-Diversity Stopping is Pareto-Optimal for Multi-Substrate Retrieval},
+@article{convergence-navigation-2026,
+  title={Convergence-Based Navigation: A Framework for Agents That Know When to Stop Exploring},
   year={2026},
   note={Under review at EMNLP 2026}
 }

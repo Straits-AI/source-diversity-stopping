@@ -34,7 +34,7 @@ from .base import Policy
 
 # ── Default paths ─────────────────────────────────────────────────────────────
 _MODELS_DIR = Path(__file__).resolve().parent.parent.parent.parent / "experiments" / "models"
-_DEFAULT_MODEL_PATH = _MODELS_DIR / "stopping_classifier.pkl"
+_DEFAULT_MODEL_PATH = _MODELS_DIR / "stopping_classifier_clean.pkl"
 
 # Minimal stop words for keyword query
 _STOP_WORDS = frozenset(
@@ -87,7 +87,7 @@ class LearnedStoppingPolicy(Policy):
     ----------
     model_path : str or Path, optional
         Path to the saved model pickle bundle.  Defaults to
-        experiments/models/stopping_classifier.pkl.
+        experiments/models/stopping_classifier_clean.pkl.
     top_k : int
         Documents per retrieval step.  Default 5.
     max_steps : int

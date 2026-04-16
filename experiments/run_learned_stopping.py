@@ -59,11 +59,11 @@ SEED = 42
 N_EVAL = 100   # Evaluation split: questions 0-100 (no overlap with training 200-700)
 RESULTS_DIR = Path(__file__).resolve().parent / "results"
 RESULTS_FILE = RESULTS_DIR / "learned_stopping_results.json"
-MODEL_PATH = Path(__file__).resolve().parent / "models" / "stopping_classifier.pkl"
+MODEL_PATH = Path(__file__).resolve().parent / "models" / "stopping_classifier_clean.pkl"
 
 OPENROUTER_API_KEY = os.environ.get(
     "OPENROUTER_API_KEY",
-    "REPLACE_WITH_YOUR_OPENROUTER_API_KEY",
+    "",
 )
 
 # Sensitivity analysis mu values
@@ -354,7 +354,7 @@ def print_results(all_results: dict, sensitivity: dict, n_examples: int) -> None
     if learned_result:
         try:
             import pickle
-            model_bundle_path = Path(__file__).resolve().parent / "models" / "stopping_classifier.pkl"
+            model_bundle_path = Path(__file__).resolve().parent / "models" / "stopping_classifier_clean.pkl"
             if model_bundle_path.exists():
                 with open(model_bundle_path, "rb") as fh:
                     bundle = pickle.load(fh)

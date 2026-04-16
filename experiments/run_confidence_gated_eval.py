@@ -73,7 +73,7 @@ RESULTS_FILE = RESULTS_DIR / "confidence_gated.json"
 
 os.environ.setdefault(
     "OPENROUTER_API_KEY",
-    "REPLACE_WITH_YOUR_OPENROUTER_API_KEY",
+    "",
 )
 
 # Shared SentenceTransformer encoder

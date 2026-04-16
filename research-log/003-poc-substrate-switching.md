@@ -1,3 +1,5 @@
+> Note: PoC files referenced below have been moved to deprecated/poc/
+
 # PoC: Substrate Switching Validation
 
 **Date:** 2026-04-04

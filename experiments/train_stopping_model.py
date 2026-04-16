@@ -2,7 +2,7 @@
 Train a learned stopping classifier from collected trajectories.
 
 Loads trajectories.json, trains logistic regression + gradient boosted tree,
-reports metrics, and saves the best model to experiments/models/stopping_classifier.pkl.
+reports metrics, and saves the best model to experiments/models/stopping_classifier_clean.pkl.
 """
 
 from __future__ import annotations
@@ -39,7 +39,7 @@ SEED = 42
 DATA_DIR = Path(__file__).resolve().parent / "data"
 MODELS_DIR = Path(__file__).resolve().parent / "models"
 TRAJECTORIES_FILE = DATA_DIR / "trajectories.json"
-MODEL_FILE = MODELS_DIR / "stopping_classifier.pkl"
+MODEL_FILE = MODELS_DIR / "stopping_classifier_clean.pkl"
 
 FEATURE_NAMES = [
     "n_workspace_items",

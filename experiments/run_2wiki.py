@@ -65,11 +65,11 @@ N_EXAMPLES = 100
 SEED = 42
 RESULTS_DIR = Path(__file__).resolve().parent / "results"
 RESULTS_FILE = RESULTS_DIR / "2wiki.json"
-MODEL_PATH = Path(__file__).resolve().parent / "models" / "stopping_classifier.pkl"
+MODEL_PATH = Path(__file__).resolve().parent / "models" / "stopping_classifier_clean.pkl"
 
 OPENROUTER_API_KEY = os.environ.get(
     "OPENROUTER_API_KEY",
-    "REPLACE_WITH_YOUR_OPENROUTER_API_KEY",
+    "",
 )
 
 # Policies for E2E LLM-answer evaluation (subset to control API cost)

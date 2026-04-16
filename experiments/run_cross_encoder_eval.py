@@ -29,7 +29,7 @@ os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
 
 # Set API key BEFORE importing answer_generator — that module reads the env var
 # at import time (module-level constant), so it must be set first.
-_OPENROUTER_KEY = "REPLACE_WITH_YOUR_OPENROUTER_API_KEY"
+_OPENROUTER_KEY = ""
 os.environ.setdefault("OPENROUTER_API_KEY", _OPENROUTER_KEY)
 
 # Project root on sys.path
